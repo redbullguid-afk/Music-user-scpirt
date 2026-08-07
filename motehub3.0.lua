@@ -1,5 +1,6 @@
 -- ==================================================
--- MOTEHUB V7.1 - GỘP ESP RƯƠNG & VẬT PHẨM
+-- MOTE HUB BETA 1.0 - OFFICIAL RELEASE (WITH ADMIN INFO)
+-- Custom UI, Color System, Doors Jump & Info Tab
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -12,25 +13,26 @@ local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
 
 -- Bảng quản lý trạng thái
 local Flags = {
     AntiAFK = true,
-    FlyCarpet = false,
-    Fullbright = false,
-    ESPPlayer = false,
-    ESPMonster = true,
-    ESPItems = true,           -- Gộp ESP Rương & Vật Phẩm (Không chứa Tiền)
-    ESPDoor = true,
-    MonsterNotify = true,
     SpeedHack = false,
-    InfiniteJump = false,
-    SemiAutoLoot = true
+    Fullbright = false,
+    ESPDoor = true,
+    ESPItems = true,
+    ESPMonster = true,
+    ESPPlayer = false,
+    DoorsJump = false,
+    SemiAutoLoot = true,
+    AutoMinigame = true,
+    FlyCarpet = false,
+    MonsterNotify = true
 }
 
 local SpeedMultiplier = 1.3
-local isLooting = false
+local lastSeekNotifyTime = 0
+local figureDetectedNotified = false
 
 local OriginalLighting = {
     Brightness = Lighting.Brightness,
@@ -42,7 +44,7 @@ local OriginalLighting = {
 }
 
 --------------------------------------------------
--- 1. BỔ TRỢ HỆ THỐNG
+-- 1. TÍNH NĂNG BỔ TRỢ & BÓNG TỐI
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -53,30 +55,6 @@ task.spawn(function()
             end)
         end
     end)
-end)
-
-local carpetPart = Instance.new("Part")
-carpetPart.Name = "MoteHub_MagicCarpet"
-carpetPart.Size = Vector3.new(6, 0.4, 6)
-carpetPart.Material = Enum.Material.Neon
-carpetPart.Color = Color3.fromRGB(0, 255, 128)
-carpetPart.Transparency = 0.3
-carpetPart.Anchored = true
-carpetPart.CanCollide = true
-
-RunService.RenderStepped:Connect(function()
-    if Flags.FlyCarpet and LocalPlayer.Character then
-        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if rootPart and humanoid and humanoid.Health > 0 then
-            carpetPart.Parent = Workspace
-            carpetPart.CFrame = rootPart.CFrame * CFrame.new(0, -3.1, 0)
-        else
-            carpetPart.Parent = nil
-        end
-    else
-        carpetPart.Parent = nil
-    end
 end)
 
 local lastBaseSpeed = 16
@@ -120,196 +98,46 @@ task.spawn(function()
     end
 end)
 
-UserInputService.JumpRequest:Connect(function()
-    if Flags.InfiniteJump and LocalPlayer.Character then
+--------------------------------------------------
+-- 2. THẢM BAY & AUTO LOOT
+--------------------------------------------------
+local carpetPart = Instance.new("Part")
+carpetPart.Name = "MoteHub_MagicCarpet"
+carpetPart.Size = Vector3.new(6, 0.4, 6)
+carpetPart.Material = Enum.Material.Neon
+carpetPart.Color = Color3.fromRGB(160, 32, 240)
+carpetPart.Transparency = 0.3
+carpetPart.Anchored = true
+carpetPart.CanCollide = true
+
+RunService.RenderStepped:Connect(function()
+    if Flags.FlyCarpet and LocalPlayer.Character then
+        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        if rootPart and humanoid and humanoid.Health > 0 then
+            carpetPart.Parent = Workspace
+            carpetPart.CFrame = rootPart.CFrame * CFrame.new(0, -3.1, 0)
+        else
+            carpetPart.Parent = nil
         end
+    else
+        carpetPart.Parent = nil
     end
 end)
-
---------------------------------------------------
--- 2. ESP CỬA
---------------------------------------------------
-local function setupDoorESP(doorModel)
-    if not doorModel or not doorModel:IsA("Model") then return end
-    if doorModel.Name ~= "Door" then return end
-    if doorModel:FindFirstChild("Mote_DoorTag", true) then return end
-
-    local doorPart = doorModel:FindFirstChild("Door") or doorModel:FindFirstChildWhichIsA("BasePart")
-    if not doorPart then return end
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "Mote_DoorTag"
-    billboard.Adornee = doorPart
-    billboard.Size = UDim2.new(0, 160, 0, 35)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextStrokeTransparency = 0
-    label.TextSize = 13
-    label.Font = Enum.Font.SourceSansBold
-    label.TextColor3 = Color3.fromRGB(0, 255, 128)
-    label.Parent = billboard
-    billboard.Parent = doorPart
-
-    task.spawn(function()
-        while doorModel and doorModel.Parent do
-            if Flags.ESPDoor and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                billboard.Enabled = true
-                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - doorPart.Position).Magnitude)
-                label.Text = string.format("🚪 Cửa\n[%d studs]", dist)
-            else
-                billboard.Enabled = false
-            end
-            task.wait(0.25)
-        end
-    end)
-end
-
---------------------------------------------------
--- 3. ESP VẬT PHẨM & RƯƠNG (GỘP CHUNG 1 CÔNG TẮC)
---------------------------------------------------
-local ImportantItems = {
-    ["KeyObtain"] = "🔑 Chìa Khóa",
-    ["Key"] = "🔑 Chìa Khóa",
-    ["MasterKey"] = "🔑 Chìa Khóa Vạn Năng",
-    ["Flashlight"] = "🔦 Đèn Pin",
-    ["Candle"] = "🕯️ Nến",
-    ["Crucifix"] = "✝️ Thánh Giá",
-    ["Lockpick"] = "🗝️ Móc Khóa",
-    ["Bandage"] = "🩹 Băng Gạc",
-    ["Vitamins"] = "💊 Vitamin",
-    ["Battery"] = "🔋 Pin",
-    ["Shears"] = "✂️ Kéo",
-    ["HerbOfViridis"] = "🌿 Thảo Dược",
-    ["ShakableLight"] = "🔦 Đèn Lắc",
-    ["Bulklight"] = "🔦 Đèn Bão",
-    ["LeverForGate"] = "⚡ Công Tắc",
-    ["Lever"] = "⚡ Công Tắc",
-    ["GateButton"] = "⚡ Nút Bấm Cửa",
-    ["LiveHintBook"] = "📘 Sách",
-    ["Book"] = "📘 Sách",
-    ["HintBook"] = "📘 Sách",
-    ["FuseInPlainSight"] = "🔋 Cầu Chì",
-    ["Fuse"] = "🔋 Cầu Chì"
-}
-
-local function applyTargetESP(obj)
-    if not (obj:IsA("Model") or obj:IsA("Tool") or obj:IsA("BasePart")) then return end
-    local name = obj.Name
-
-    -- A. Xử lý Rương (Chest)
-    if name == "Chest" or (name:find("Chest") and not name:find("Monster")) then
-        if obj:FindFirstChild("Mote_ChestTag", true) then return end
-        local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-        if not targetPart then return end
-
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "Mote_ChestTag"
-        billboard.Adornee = targetPart
-        billboard.Size = UDim2.new(0, 140, 0, 30)
-        billboard.StudsOffset = Vector3.new(0, 1.5, 0)
-        billboard.AlwaysOnTop = true
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.fromRGB(255, 200, 50)
-        label.TextStrokeTransparency = 0
-        label.TextSize = 12
-        label.Font = Enum.Font.SourceSansBold
-        label.Parent = billboard
-        billboard.Parent = targetPart
-
-        task.spawn(function()
-            while obj and obj.Parent do
-                if Flags.ESPItems and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    billboard.Enabled = true
-                    local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
-                    label.Text = string.format("🧰 Rương Đồ\n[%d studs]", dist)
-                else
-                    billboard.Enabled = false
-                end
-                task.wait(0.3)
-            end
-        end)
-        return
-    end
-
-    -- B. Xử lý Vật phẩm quan trọng (Không hiển thị tiền)
-    local itemDisplayName = ImportantItems[name]
-    if itemDisplayName then
-        if obj:FindFirstChild("Mote_ItemTag", true) then return end
-        local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-        if not targetPart then return end
-
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "Mote_ItemTag"
-        billboard.Adornee = targetPart
-        billboard.Size = UDim2.new(0, 140, 0, 30)
-        billboard.StudsOffset = Vector3.new(0, 1.2, 0)
-        billboard.AlwaysOnTop = true
-
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.fromRGB(0, 255, 255)
-        label.TextStrokeTransparency = 0
-        label.TextSize = 12
-        label.Font = Enum.Font.SourceSansBold
-        label.Parent = billboard
-        billboard.Parent = targetPart
-
-        task.spawn(function()
-            while obj and obj.Parent do
-                if Flags.ESPItems and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    billboard.Enabled = true
-                    local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
-                    label.Text = string.format("%s\n[%d studs]", itemDisplayName, dist)
-                else
-                    billboard.Enabled = false
-                end
-                task.wait(0.3)
-            end
-        end)
-    end
-end
-
---------------------------------------------------
--- 4. LOGIC AUTO NHẶT (SEMI-AUTO LOOT)
---------------------------------------------------
-local function triggerPrompt(prompt)
-    if not prompt or not prompt.Enabled or isLooting then return end
-    isLooting = true
-    pcall(function()
-        fireproximityprompt(prompt)
-    end)
-    task.wait(0.1)
-    isLooting = false
-end
 
 task.spawn(function()
-    while task.wait(0.1) do
-        if Flags.SemiAutoLoot and LocalPlayer.Character then
-            local unitRay = Camera:ViewportPointToRay(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterAncestorsOfInstances = {LocalPlayer.Character}
-            raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-
-            local rayResult = Workspace:Raycast(unitRay.Origin, unitRay.Direction * 15, raycastParams)
-
-            if rayResult and rayResult.Instance then
-                local hitObj = rayResult.Instance
-                local prompt = hitObj:FindFirstChildWhichIsA("ProximityPrompt", true) 
-                              or (hitObj.Parent and hitObj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true))
-
-                if prompt and prompt.Enabled then
-                    triggerPrompt(prompt)
+    while task.wait(0.15) do
+        if Flags.SemiAutoLoot and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            for _, desc in ipairs(Workspace:GetDescendants()) do
+                if desc:IsA("ProximityPrompt") and desc.Enabled then
+                    local parentPart = desc.Parent
+                    if parentPart and parentPart:IsA("BasePart") then
+                        local dist = (hrp.Position - parentPart.Position).Magnitude
+                        if dist <= desc.MaxActivationDistance then
+                            pcall(function() fireproximityprompt(desc) end)
+                        end
+                    end
                 end
             end
         end
@@ -317,163 +145,202 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- 5. ESP QUÁI VẬT & CẢNH BÁO
+-- 3. HỆ THỐNG ESP (CỬA, ITEM, MONSTER, PLAYER)
 --------------------------------------------------
+local ImportantItems = {
+    ["KeyObtain"] = "🔑 Chìa Khóa", ["Key"] = "🔑 Chìa Khóa", ["MasterKey"] = "🔑 Chìa Khóa Vạn Năng",
+    ["Flashlight"] = "🔦 Đèn Pin", ["Candle"] = "🕯️ Nến", ["Crucifix"] = "✝️ Thánh Giá",
+    ["Lockpick"] = "🗝️ Móc Khóa", ["Bandage"] = "🩹 Băng Gạc", ["Vitamins"] = "💊 Vitamin",
+    ["Battery"] = "🔋 Pin", ["Shears"] = "✂️ Kéo", ["HerbOfViridis"] = "🌿 Thảo Dược",
+    ["ShakableLight"] = "🔦 Đèn Lắc", ["Bulklight"] = "🔦 Đèn Bão", ["LeverForGate"] = "⚡ Công Tắc",
+    ["Lever"] = "⚡ Công Tắc", ["GateButton"] = "⚡ Nút Bấm Cửa", ["LiveHintBook"] = "📘 Sách",
+    ["Book"] = "📘 Sách", ["HintBook"] = "📘 Sách", ["FuseInPlainSight"] = "🔋 Cầu Chì", ["Fuse"] = "🔋 Cầu Chì"
+}
+
 local MonsterInfo = {
     ["RushMoving"] = { Name = "Rush", Advice = "Trốn vào tủ hoặc hầm ngay!" },
-    ["AmbushMoving"] = { Name = "Ambush", Advice = "Trốn tủ và chuẩn bị ra/vào lại liên tục!" },
-    ["FigureRig"] = { Name = "Figure", Advice = "Hãy ngồi xuống và đi rón rén!" },
-    ["SeekMoving"] = { Name = "Seek", Advice = "Chuẩn bị chạy vượt rào cản!" },
-    ["SeekRig"] = { Name = "Seek", Advice = "Chuẩn bị chạy vượt rào cản!" },
+    ["AmbushMoving"] = { Name = "Ambush", Advice = "Trốn tủ và chuẩn bị ra/vào lại!" },
+    ["FigureRig"] = { Name = "Figure", Advice = "Ngồi xuống và đi rón rén!" },
     ["Screech"] = { Name = "Screech", Advice = "Quay camera nhìn thẳng vào nó!" },
     ["Eyes"] = { Name = "Eyes", Advice = "Đừng nhìn thẳng vào nó!" },
-    ["Halt"] = { Name = "Halt", Advice = "Quay đầu đi ngược lại khi màn hình nhấp nháy!" },
-    ["Snare"] = { Name = "Snare", Advice = "Cẩn thận dưới chân, tránh bẫy gai!" },
-    ["A60"] = { Name = "A-60", Advice = "Trốn vào tủ ngay lập tức!" },
-    ["A120"] = { Name = "A-120", Advice = "Trốn tủ cẩn thận, nó di chuyển chậm!" },
-    ["A90"] = { Name = "A-90", Advice = "DỪNG LẠI NGAY! Không di chuyển hay xoay camera!" },
-    ["Giggle"] = { Name = "Giggle", Advice = "Né trần nhà, chớ đứng dưới nó!" },
+    ["Halt"] = { Name = "Halt", Advice = "Quay đầu đi ngược lại!" },
+    ["Snare"] = { Name = "Snare", Advice = "Cẩn thận dưới chân, né bẫy gai!" },
+    ["A60"] = { Name = "A-60", Advice = "Trốn tủ ngay lập tức!" },
+    ["A120"] = { Name = "A-120", Advice = "Trốn tủ cẩn thận!" },
+    ["A90"] = { Name = "A-90", Advice = "DỪNG LẠI NGAY! Không di chuyển!" },
+    ["Giggle"] = { Name = "Giggle", Advice = "Tránh đứng dưới trần nhà!" },
     ["Grumble"] = { Name = "Grumble", Advice = "Giữ khoảng cách xa!" },
     ["Dread"] = { Name = "Dread", Advice = "Mở cửa phòng mới thật nhanh!" }
 }
 
 local notifiedMonsters = {}
 
-local function applyMonsterESP(obj)
-    if not (obj:IsA("Model") or obj:IsA("BasePart")) then return end
-    
-    local lowerName = obj.Name:lower()
-    if lowerName:find("painting") or lowerName:find("hand") or lowerName:find("decal") or lowerName:find("texture") or lowerName:find("trigger") then
-        return
-    end
-
-    local monsterData = nil
-    for name, data in pairs(MonsterInfo) do
-        if obj.Name == name or (name == "SeekMoving" and obj.Name:find("Seek")) then
-            monsterData = data
-            break
-        end
-    end
-    
-    if not monsterData then return end
-    if obj.Parent and MonsterInfo[obj.Parent.Name] then return end
-
-    if Flags.MonsterNotify and not notifiedMonsters[obj] then
-        notifiedMonsters[obj] = true
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "⚠️ " .. monsterData.Name .. " XUẤT HIỆN!",
-                Text = monsterData.Advice,
-                Duration = 5
-            })
-        end)
-    end
-
-    local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-    if not targetPart then return end
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "Mote_MonsterTag"
-    billboard.Adornee = targetPart
-    billboard.Size = UDim2.new(0, 160, 0, 35)
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
-    billboard.AlwaysOnTop = true
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(255, 50, 50)
-    label.TextStrokeTransparency = 0
-    label.TextSize = 13
-    label.Font = Enum.Font.SourceSansBold
-    label.Parent = billboard
-    billboard.Parent = targetPart
-
-    task.spawn(function()
-        while obj and obj.Parent do
-            if Flags.ESPMonster and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                billboard.Enabled = true
-                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
-                label.Text = string.format("👹 %s\n[%d studs]", monsterData.Name, dist)
-            else
-                billboard.Enabled = false
-            end
-            task.wait(0.2)
-        end
-    end)
-end
-
---------------------------------------------------
--- 6. ESP NGƯỜI CHƠI
---------------------------------------------------
-local function applyPlayerESP(player)
-    if player == LocalPlayer then return end
-    local function setupCharacter(character)
-        if not character then return end
-        local head = character:WaitForChild("Head", 5)
-        if not head then return end
-
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "Mote_PlayerTag"
-        billboard.Adornee = head
-        billboard.Size = UDim2.new(0, 160, 0, 35)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-        textLabel.TextStrokeTransparency = 0
-        textLabel.TextSize = 13
-        textLabel.Font = Enum.Font.SourceSansBold
-        textLabel.Parent = billboard
-        billboard.Parent = head
-
-        task.spawn(function()
-            while character and character.Parent do
-                if Flags.ESPPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    billboard.Enabled = true
-                    local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude)
-                    textLabel.Text = string.format("👤 %s\n[%d studs]", player.DisplayName, dist)
-                else
-                    billboard.Enabled = false
-                end
-                task.wait(0.2)
-            end
-        end)
-    end
-    if player.Character then setupCharacter(player.Character) end
-    player.CharacterAdded:Connect(setupCharacter)
-end
-
-task.spawn(function()
-    for _, p in ipairs(Players:GetPlayers()) do applyPlayerESP(p) end
-    Players.PlayerAdded:Connect(applyPlayerESP)
-end)
-
---------------------------------------------------
--- 7. QUÉT MAP
---------------------------------------------------
 local function processObject(obj)
     pcall(function()
-        applyTargetESP(obj)
-        applyMonsterESP(obj)
-        setupDoorESP(obj)
+        if not (obj:IsA("Model") or obj:IsA("Tool") or obj:IsA("BasePart")) then return end
+        
+        -- Door ESP
+        if obj.Name == "Door" and obj:IsA("Model") and not obj:FindFirstChild("Mote_DoorTag", true) then
+            local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
+            if doorPart then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "Mote_DoorTag"; billboard.Adornee = doorPart; billboard.Size = UDim2.new(0, 160, 0, 35); billboard.StudsOffset = Vector3.new(0, 2.5, 0); billboard.AlwaysOnTop = true
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.TextStrokeTransparency = 0; label.TextSize = 13; label.Font = Enum.Font.SourceSansBold; label.TextColor3 = Color3.fromRGB(0, 255, 128); label.Parent = billboard
+                billboard.Parent = doorPart
+                task.spawn(function()
+                    while obj and obj.Parent do
+                        if Flags.ESPDoor and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            billboard.Enabled = true
+                            local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - doorPart.Position).Magnitude)
+                            label.Text = string.format("🚪 Cửa\n[%d studs]", dist)
+                        else billboard.Enabled = false end
+                        task.wait(0.25)
+                    end
+                end)
+            end
+        end
+
+        -- Items & Chest ESP
+        if obj.Name == "Chest" or (obj.Name:find("Chest") and not obj.Name:find("Monster")) then
+            if not obj:FindFirstChild("Mote_ChestTag", true) then
+                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                if targetPart then
+                    local billboard = Instance.new("BillboardGui")
+                    billboard.Name = "Mote_ChestTag"; billboard.Adornee = targetPart; billboard.Size = UDim2.new(0, 140, 0, 30); billboard.StudsOffset = Vector3.new(0, 1.5, 0); billboard.AlwaysOnTop = true
+                    local label = Instance.new("TextLabel")
+                    label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.TextColor3 = Color3.fromRGB(255, 200, 50); label.TextStrokeTransparency = 0; label.TextSize = 12; label.Font = Enum.Font.SourceSansBold; label.Parent = billboard
+                    billboard.Parent = targetPart
+                    task.spawn(function()
+                        while obj and obj.Parent do
+                            if Flags.ESPItems and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                billboard.Enabled = true
+                                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
+                                label.Text = string.format("🧰 Rương Đồ\n[%d studs]", dist)
+                            else billboard.Enabled = false end
+                            task.wait(0.3)
+                        end
+                    end)
+                end
+            end
+        elseif ImportantItems[obj.Name] then
+            if not obj:FindFirstChild("Mote_ItemTag", true) then
+                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                if targetPart then
+                    local billboard = Instance.new("BillboardGui")
+                    billboard.Name = "Mote_ItemTag"; billboard.Adornee = targetPart; billboard.Size = UDim2.new(0, 140, 0, 30); billboard.StudsOffset = Vector3.new(0, 1.2, 0); billboard.AlwaysOnTop = true
+                    local label = Instance.new("TextLabel")
+                    label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.TextColor3 = Color3.fromRGB(0, 255, 255); label.TextStrokeTransparency = 0; label.TextSize = 12; label.Font = Enum.Font.SourceSansBold; label.Parent = billboard
+                    billboard.Parent = targetPart
+                    task.spawn(function()
+                        while obj and obj.Parent do
+                            if Flags.ESPItems and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                billboard.Enabled = true
+                                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
+                                label.Text = string.format("%s\n[%d studs]", ImportantItems[obj.Name], dist)
+                            else billboard.Enabled = false end
+                            task.wait(0.3)
+                        end
+                    end)
+                end
+            end
+        end
+
+        -- Monster ESP
+        if obj.Name:find("Seek") then
+            local currentTime = tick()
+            if Flags.MonsterNotify and (currentTime - lastSeekNotifyTime >= 180) then
+                lastSeekNotifyTime = currentTime
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", { Title = "⚠️ SEEK BẮT ĐẦU XUẤT HIỆN!", Text = "Chuẩn bị chạy vượt rào cản!", Duration = 6 })
+                end)
+            end
+            return
+        end
+
+        local monsterData = MonsterInfo[obj.Name]
+        if monsterData and not (obj.Parent and MonsterInfo[obj.Parent.Name]) then
+            if Flags.MonsterNotify and not notifiedMonsters[obj] then
+                notifiedMonsters[obj] = true
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", { Title = "⚠️ " .. monsterData.Name .. " XUẤT HIỆN!", Text = monsterData.Advice, Duration = 5 })
+                end)
+            end
+            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+            if targetPart and not obj:FindFirstChild("Mote_MonsterTag", true) then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "Mote_MonsterTag"; billboard.Adornee = targetPart; billboard.Size = UDim2.new(0, 160, 0, 35); billboard.StudsOffset = Vector3.new(0, 2, 0); billboard.AlwaysOnTop = true
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.TextColor3 = Color3.fromRGB(255, 50, 50); label.TextStrokeTransparency = 0; label.TextSize = 13; label.Font = Enum.Font.SourceSansBold; label.Parent = billboard
+                billboard.Parent = targetPart
+                task.spawn(function()
+                    while obj and obj.Parent do
+                        if Flags.ESPMonster and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            billboard.Enabled = true
+                            local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
+                            label.Text = string.format("👹 %s\n[%d studs]", monsterData.Name, dist)
+                        else billboard.Enabled = false end
+                        task.wait(0.2)
+                    end
+                end)
+            end
+        end
     end)
 end
 
-for _, obj in ipairs(Workspace:GetDescendants()) do
-    processObject(obj)
-end
-
+for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- 8. GIAO DIỆN GUI (MOTEHUB V7.1)
+-- 4. MINIGAME TỦ & CẢNH BÁO FIGURE
+--------------------------------------------------
+task.spawn(function()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    PlayerGui.ChildAdded:Connect(function(child)
+        if Flags.AutoMinigame and (child.Name == "Heartbeat" or child.Name:find("Minigame")) then
+            task.spawn(function()
+                while child and child.Parent do
+                    pcall(function()
+                        local heartbeatFrame = child:FindFirstChild("Frame") or child
+                        if heartbeatFrame then
+                            for _, elem in ipairs(heartbeatFrame:GetDescendants()) do
+                                if (elem:IsA("ImageButton") or elem:IsA("TextButton")) and elem.Visible then
+                                    firesignal(elem.MouseButton1Click)
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.05)
+                end
+            end)
+        end
+    end)
+end)
+
+task.spawn(function()
+    while task.wait(0.4) do
+        if Flags.MonsterNotify and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local figure = Workspace:FindFirstChild("FigureRig", true)
+            if figure and figure:FindFirstChild("HumanoidRootPart") then
+                local dist = (LocalPlayer.Character.HumanoidRootPart.Position - figure.HumanoidRootPart.Position).Magnitude
+                if dist < 18 then
+                    if not figureDetectedNotified then
+                        figureDetectedNotified = true
+                        pcall(function()
+                            StarterGui:SetCore("SendNotification", { Title = "🚨 CẢNH BÁO: FIGURE Ở CỰC GẦN!", Text = "Figure đang tiến gần! Ngồi xuống ngay!", Duration = 4 })
+                        end)
+                    end
+                else figureDetectedNotified = false end
+            end
+        end
+    end
+end)
+
+--------------------------------------------------
+-- 5. GUI MOTE HUB BETA 1.0 (COLORFUL UI & INFO TAB)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_GUI"
+screenGui.Name = "MoteHub_Beta1"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -499,128 +366,92 @@ local function makeDraggable(gui)
     end)
 end
 
+-- Nút tròn mở Menu
 local circleBtn = Instance.new("TextButton")
-circleBtn.Size = UDim2.new(0, 50, 0, 50)
+circleBtn.Size = UDim2.new(0, 52, 0, 52)
 circleBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
 circleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-circleBtn.TextColor3 = Color3.fromRGB(0, 255, 128)
+circleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
 circleBtn.Text = "mote"
 circleBtn.Font = Enum.Font.GothamBold
 circleBtn.TextSize = 13
 circleBtn.Parent = screenGui
 makeDraggable(circleBtn)
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(1, 0)
-btnCorner.Parent = circleBtn
+local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1, 0); btnCorner.Parent = circleBtn
+local btnStroke = Instance.new("UIStroke"); btnStroke.Color = Color3.fromRGB(255, 215, 0); btnStroke.Thickness = 2; btnStroke.Parent = circleBtn
 
-local btnStroke = Instance.new("UIStroke")
-btnStroke.Color = Color3.fromRGB(0, 255, 128)
-btnStroke.Thickness = 2
-btnStroke.Parent = circleBtn
-
+-- Khung Menu Chính
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 260, 0, 380)
+mainFrame.Size = UDim2.new(0, 280, 0, 390)
 mainFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
 makeDraggable(mainFrame)
 
-local frameCorner = Instance.new("UICorner")
-frameCorner.CornerRadius = UDim.new(0, 10)
-frameCorner.Parent = mainFrame
+local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.new(0, 12); frameCorner.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 35)
-titleLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-titleLabel.TextColor3 = Color3.fromRGB(0, 255, 128)
-titleLabel.Text = "MOTE HUB V7.1"
+titleLabel.Size = UDim2.new(1, 0, 0, 38)
+titleLabel.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
+titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+titleLabel.Text = "MOTE HUB BETA 1.0"
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 14
 titleLabel.Parent = mainFrame
+local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 12); titleCorner.Parent = titleLabel
 
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 10)
-titleCorner.Parent = titleLabel
-
+-- Thanh chuyển Tab (Chia đều làm 4 Tab)
 local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(0.92, 0, 0, 30)
-tabContainer.Position = UDim2.new(0.04, 0, 0.11, 0)
+tabContainer.Size = UDim2.new(0.94, 0, 0, 30)
+tabContainer.Position = UDim2.new(0.03, 0, 0.12, 0)
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = mainFrame
 
-local mainTabBtn = Instance.new("TextButton")
-mainTabBtn.Size = UDim2.new(0.31, 0, 1, 0)
-mainTabBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
-mainTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-mainTabBtn.Text = "Bổ Trợ"
-mainTabBtn.Font = Enum.Font.SourceSansBold
-mainTabBtn.TextSize = 12
-mainTabBtn.Parent = tabContainer
+local tab1Btn = Instance.new("TextButton")
+tab1Btn.Size = UDim2.new(0.23, 0, 1, 0); tab1Btn.BackgroundColor3 = Color3.fromRGB(255, 170, 0); tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255); tab1Btn.Text = "Bổ Trợ"; tab1Btn.Font = Enum.Font.SourceSansBold; tab1Btn.TextSize = 11; tab1Btn.Parent = tabContainer
+local t1C = Instance.new("UICorner"); t1C.CornerRadius = UDim.new(0, 6); t1C.Parent = tab1Btn
 
-local espTabBtn = Instance.new("TextButton")
-espTabBtn.Size = UDim2.new(0.31, 0, 1, 0)
-espTabBtn.Position = UDim2.new(0.34, 0, 0, 0)
-espTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-espTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-espTabBtn.Text = "ESP"
-espTabBtn.Font = Enum.Font.SourceSansBold
-espTabBtn.TextSize = 12
-espTabBtn.Parent = tabContainer
+local tab2Btn = Instance.new("TextButton")
+tab2Btn.Size = UDim2.new(0.23, 0, 1, 0); tab2Btn.Position = UDim2.new(0.25, 0, 0, 0); tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180); tab2Btn.Text = "ESP"; tab2Btn.Font = Enum.Font.SourceSansBold; tab2Btn.TextSize = 11; tab2Btn.Parent = tabContainer
+local t2C = Instance.new("UICorner"); t2C.CornerRadius = UDim.new(0, 6); t2C.Parent = tab2Btn
 
-local testTabBtn = Instance.new("TextButton")
-testTabBtn.Size = UDim2.new(0.32, 0, 1, 0)
-testTabBtn.Position = UDim2.new(0.68, 0, 0, 0)
-testTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-testTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-testTabBtn.Text = "Khác"
-testTabBtn.Font = Enum.Font.SourceSansBold
-testTabBtn.TextSize = 12
-testTabBtn.Parent = tabContainer
+local tab3Btn = Instance.new("TextButton")
+tab3Btn.Size = UDim2.new(0.25, 0, 1, 0); tab3Btn.Position = UDim2.new(0.50, 0, 0, 0); tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab3Btn.TextColor3 = Color3.fromRGB(180, 180, 180); tab3Btn.Text = "Thử Nghiệm"; tab3Btn.Font = Enum.Font.SourceSansBold; tab3Btn.TextSize = 11; tab3Btn.Parent = tabContainer
+local t3C = Instance.new("UICorner"); t3C.CornerRadius = UDim.new(0, 6); t3C.Parent = tab3Btn
 
-local mainTabPage = Instance.new("Frame")
-mainTabPage.Size = UDim2.new(1, 0, 0.8, 0)
-mainTabPage.Position = UDim2.new(0, 0, 0.2, 0)
-mainTabPage.BackgroundTransparency = 1
-mainTabPage.Visible = true
-mainTabPage.Parent = mainFrame
+local tab4Btn = Instance.new("TextButton")
+tab4Btn.Size = UDim2.new(0.22, 0, 1, 0); tab4Btn.Position = UDim2.new(0.77, 0, 0, 0); tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab4Btn.TextColor3 = Color3.fromRGB(180, 180, 180); tab4Btn.Text = "Info"; tab4Btn.Font = Enum.Font.SourceSansBold; tab4Btn.TextSize = 11; tab4Btn.Parent = tabContainer
+local t4C = Instance.new("UICorner"); t4C.CornerRadius = UDim.new(0, 6); t4C.Parent = tab4Btn
 
-local espTabPage = Instance.new("Frame")
-espTabPage.Size = UDim2.new(1, 0, 0.8, 0)
-espTabPage.Position = UDim2.new(0, 0, 0.2, 0)
-espTabPage.BackgroundTransparency = 1
-espTabPage.Visible = false
-espTabPage.Parent = mainFrame
+-- Các trang Tab
+local page1 = Instance.new("Frame"); page1.Size = UDim2.new(1, 0, 0.78, 0); page1.Position = UDim2.new(0, 0, 0.22, 0); page1.BackgroundTransparency = 1; page1.Visible = true; page1.Parent = mainFrame
+local page2 = Instance.new("Frame"); page2.Size = UDim2.new(1, 0, 0.78, 0); page2.Position = UDim2.new(0, 0, 0.22, 0); page2.BackgroundTransparency = 1; page2.Visible = false; page2.Parent = mainFrame
+local page3 = Instance.new("Frame"); page3.Size = UDim2.new(1, 0, 0.78, 0); page3.Position = UDim2.new(0, 0, 0.22, 0); page3.BackgroundTransparency = 1; page3.Visible = false; page3.Parent = mainFrame
+local page4 = Instance.new("Frame"); page4.Size = UDim2.new(1, 0, 0.78, 0); page4.Position = UDim2.new(0, 0, 0.22, 0); page4.BackgroundTransparency = 1; page4.Visible = false; page4.Parent = mainFrame
 
-local testTabPage = Instance.new("Frame")
-testTabPage.Size = UDim2.new(1, 0, 0.8, 0)
-testTabPage.Position = UDim2.new(0, 0, 0.2, 0)
-testTabPage.BackgroundTransparency = 1
-testTabPage.Visible = false
-testTabPage.Parent = mainFrame
-
-local function createToggleButton(parent, name, flagName, posY)
+-- Hàm tạo Nút bấm Đa Màu Sắc
+local function createCustomButton(parent, name, flagName, posY, activeColor, inactiveColor)
+    inactiveColor = inactiveColor or Color3.fromRGB(45, 48, 56)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.85, 0, 0, 30)
-    btn.Position = UDim2.new(0.075, 0, 0, posY)
+    btn.Size = UDim2.new(0.86, 0, 0, 32)
+    btn.Position = UDim2.new(0.07, 0, 0, posY)
     btn.Font = Enum.Font.SourceSansBold
     btn.TextSize = 13
     btn.Parent = parent
 
-    local btnC = Instance.new("UICorner")
-    btnC.CornerRadius = UDim.new(0, 6)
-    btnC.Parent = btn
+    local btnC = Instance.new("UICorner"); btnC.CornerRadius = UDim.new(0, 8); btnC.Parent = btn
 
     local function updateState()
         if Flags[flagName] then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
+            btn.BackgroundColor3 = activeColor
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
             btn.Text = name .. ": BẬT"
         else
-            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+            btn.BackgroundColor3 = inactiveColor
+            btn.TextColor3 = Color3.fromRGB(170, 170, 170)
             btn.Text = name .. ": TẮT"
         end
     end
@@ -630,41 +461,34 @@ local function createToggleButton(parent, name, flagName, posY)
         updateState()
     end)
     updateState()
+    return btn
 end
 
-createToggleButton(mainTabPage, "Anti-AFK", "AntiAFK", 10)
-createToggleButton(mainTabPage, "Tự Nhặt Khi Nhìn Vào", "SemiAutoLoot", 48)
-createToggleButton(mainTabPage, "Thảm Bay (Fly)", "FlyCarpet", 86)
+--------------------------------------------------
+-- CÀI ĐẶT CÁC TAB
+--------------------------------------------------
+
+-- TAB 1: BỔ TRỢ
+createCustomButton(page1, "1. Anti-AFK", "AntiAFK", 10, Color3.fromRGB(230, 160, 0))
 
 local speedBtn = Instance.new("TextButton")
-speedBtn.Size = UDim2.new(0.85, 0, 0, 30)
-speedBtn.Position = UDim2.new(0.075, 0, 0, 124)
-speedBtn.Font = Enum.Font.SourceSansBold
-speedBtn.TextSize = 13
-speedBtn.Parent = mainTabPage
-
-local speedC = Instance.new("UICorner")
-speedC.CornerRadius = UDim.new(0, 6)
-speedC.Parent = speedBtn
-
+speedBtn.Size = UDim2.new(0.86, 0, 0, 32); speedBtn.Position = UDim2.new(0.07, 0, 0, 50); speedBtn.Font = Enum.Font.SourceSansBold; speedBtn.TextSize = 13; speedBtn.Parent = page1
+local speedC = Instance.new("UICorner"); speedC.CornerRadius = UDim.new(0, 8); speedC.Parent = speedBtn
 local function updateSpeedUI()
     if Flags.SpeedHack then
-        speedBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
+        speedBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
         speedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        speedBtn.Text = string.format("Speed Hack: BẬT (x%.1f)", SpeedMultiplier)
+        speedBtn.Text = string.format("2. Speed Hack: BẬT (x%.1f)", SpeedMultiplier)
     else
-        speedBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        speedBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-        speedBtn.Text = "Speed Hack: TẮT"
+        speedBtn.BackgroundColor3 = Color3.fromRGB(45, 48, 56)
+        speedBtn.TextColor3 = Color3.fromRGB(170, 170, 170)
+        speedBtn.Text = "2. Speed Hack: TẮT"
     end
 end
-
 speedBtn.MouseButton1Click:Connect(function()
     if not Flags.SpeedHack then
-        Flags.SpeedHack = true
-        SpeedMultiplier = 1.3
-    elseif SpeedMultiplier == 1.3 then
-        SpeedMultiplier = 1.5
+        Flags.SpeedHack = true; SpeedMultiplier = 1.3
+    elseif SpeedMultiplier == 1.3 then SpeedMultiplier = 1.5
     else
         Flags.SpeedHack = false
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -675,36 +499,137 @@ speedBtn.MouseButton1Click:Connect(function()
 end)
 updateSpeedUI()
 
--- TAB ESP: Đã gộp ESP Vật Phẩm & Rương thành 1 công tắc duy nhất
-createToggleButton(espTabPage, "ESP Cửa", "ESPDoor", 10)
-createToggleButton(espTabPage, "ESP Vật Phẩm & Rương", "ESPItems", 50)
-createToggleButton(espTabPage, "ESP Quái Vật", "ESPMonster", 90)
-createToggleButton(espTabPage, "ESP Người Chơi", "ESPPlayer", 130)
+createCustomButton(page1, "3. Nhìn Trong Bóng Tối", "Fullbright", 90, Color3.fromRGB(220, 200, 0))
 
-createToggleButton(testTabPage, "Nhìn Bóng Tối", "Fullbright", 10)
-createToggleButton(testTabPage, "Nhảy Vô Hạn", "InfiniteJump", 48)
-createToggleButton(testTabPage, "Cảnh Báo Thông Minh", "MonsterNotify", 86)
+-- TAB 2: ESP
+createCustomButton(page2, "ESP Cửa", "ESPDoor", 10, Color3.fromRGB(0, 180, 216))
+createCustomButton(page2, "ESP Vật Phẩm & Rương", "ESPItems", 50, Color3.fromRGB(0, 119, 182))
+createCustomButton(page2, "ESP Quái Vật", "ESPMonster", 90, Color3.fromRGB(217, 4, 41))
+createCustomButton(page2, "ESP Người Chơi", "ESPPlayer", 130, Color3.fromRGB(114, 9, 183))
 
+-- TAB 3: THỬ NGHIỆM
+--------------------------------------------------
+-- NÚT NHẢY TỰ TẠO CHO DOORS (TẠO TRÊN GÓC TRÁI MÀN HÌNH)
+--------------------------------------------------
+local jumpButtonUI = Instance.new("TextButton")
+jumpButtonUI.Size = UDim2.new(0, 60, 0, 60)
+jumpButtonUI.Position = UDim2.new(0.05, 0, 0.05, 0)
+jumpButtonUI.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255)
+jumpButtonUI.Text = "NHẢY"
+jumpButtonUI.Font = Enum.Font.GothamBold
+jumpButtonUI.TextSize = 14
+jumpButtonUI.Visible = false
+jumpButtonUI.Parent = screenGui
+makeDraggable(jumpButtonUI)
+
+local jumpCorner = Instance.new("UICorner"); jumpCorner.CornerRadius = UDim.new(1, 0); jumpCorner.Parent = jumpButtonUI
+local jumpStroke = Instance.new("UIStroke"); jumpStroke.Color = Color3.fromRGB(255, 255, 255); jumpStroke.Thickness = 2; jumpStroke.Parent = jumpButtonUI
+
+jumpButtonUI.MouseButton1Click:Connect(function()
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.JumpPower = 50
+            humanoid.JumpHeight = 7.2
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+local doorsJumpBtn = createCustomButton(page3, "Nút Nhảy DOORS", "DoorsJump", 10, Color3.fromRGB(138, 43, 226))
+doorsJumpBtn.MouseButton1Click:Connect(function()
+    jumpButtonUI.Visible = Flags.DoorsJump
+end)
+
+createCustomButton(page3, "Tự Nhặt Đồ / Mở Cửa", "SemiAutoLoot", 50, Color3.fromRGB(16, 185, 129))
+createCustomButton(page3, "Tự Chơi Minigame Tủ", "AutoMinigame", 90, Color3.fromRGB(245, 158, 11))
+createCustomButton(page3, "Thảm Bay (Fly)", "FlyCarpet", 130, Color3.fromRGB(99, 102, 241))
+createCustomButton(page3, "Cảnh Báo Thông Minh", "MonsterNotify", 170, Color3.fromRGB(239, 68, 68))
+
+-- TAB 4: THÔNG TIN ADMIN (INFO TAB)
+local infoContainer = Instance.new("Frame")
+infoContainer.Size = UDim2.new(0.88, 0, 0.88, 0)
+infoContainer.Position = UDim2.new(0.06, 0, 0.04, 0)
+infoContainer.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
+infoContainer.Parent = page4
+
+local infoCorner = Instance.new("UICorner"); infoCorner.CornerRadius = UDim.new(0, 10); infoCorner.Parent = infoContainer
+local infoStroke = Instance.new("UIStroke"); infoStroke.Color = Color3.fromRGB(0, 204, 255); infoStroke.Thickness = 1.5; infoStroke.Parent = infoContainer
+
+local adminTitle = Instance.new("TextLabel")
+adminTitle.Size = UDim2.new(1, 0, 0, 30)
+adminTitle.Position = UDim2.new(0, 0, 0.05, 0)
+adminTitle.BackgroundTransparency = 1
+adminTitle.Text = "👑 THÔNG TIN ADMIN 👑"
+adminTitle.Font = Enum.Font.GothamBold
+adminTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+adminTitle.TextSize = 14
+adminTitle.Parent = infoContainer
+
+local authorLabel = Instance.new("TextLabel")
+authorLabel.Size = UDim2.new(0.9, 0, 0, 40)
+authorLabel.Position = UDim2.new(0.05, 0, 0.22, 0)
+authorLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52)
+authorLabel.Text = "  Tác Giả: By Mờ Tê"
+authorLabel.Font = Enum.Font.SourceSansBold
+authorLabel.TextColor3 = Color3.fromRGB(0, 255, 204)
+authorLabel.TextSize = 14
+authorLabel.TextXAlignment = Enum.TextXAlignment.Left
+authorLabel.Parent = infoContainer
+local aC = Instance.new("UICorner"); aC.CornerRadius = UDim.new(0, 6); aC.Parent = authorLabel
+
+local fbLabel = Instance.new("TextLabel")
+fbLabel.Size = UDim2.new(0.9, 0, 0, 40)
+fbLabel.Position = UDim2.new(0.05, 0, 0.44, 0)
+fbLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52)
+fbLabel.Text = "  Facebook: Nguyễn minh tân"
+fbLabel.Font = Enum.Font.SourceSansBold
+fbLabel.TextColor3 = Color3.fromRGB(24, 119, 242)
+fbLabel.TextSize = 13
+fbLabel.TextXAlignment = Enum.TextXAlignment.Left
+fbLabel.Parent = infoContainer
+local fbC = Instance.new("UICorner"); fbC.CornerRadius = UDim.new(0, 6); fbC.Parent = fbLabel
+
+local versionLabel = Instance.new("TextLabel")
+versionLabel.Size = UDim2.new(0.9, 0, 0, 35)
+versionLabel.Position = UDim2.new(0.05, 0, 0.66, 0)
+versionLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52)
+versionLabel.Text = "  Phiên Bản: Mote Hub Beta 1.0"
+versionLabel.Font = Enum.Font.SourceSansBold
+versionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+versionLabel.TextSize = 12
+versionLabel.TextXAlignment = Enum.TextXAlignment.Left
+versionLabel.Parent = infoContainer
+local vC = Instance.new("UICorner"); vC.CornerRadius = UDim.new(0, 6); vC.Parent = versionLabel
+
+--------------------------------------------------
+-- CHUYỂN TAB CỬA SỔ
+--------------------------------------------------
 local function switchTab(activeBtn, activePage)
-    mainTabPage.Visible = false
-    espTabPage.Visible = false
-    testTabPage.Visible = false
-
-    mainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    mainTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-    espTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    espTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
-    testTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    testTabBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    page1.Visible = false; page2.Visible = false; page3.Visible = false; page4.Visible = false
+    tab1Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab1Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    tab2Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab2Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab3Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    tab4Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab4Btn.TextColor3 = Color3.fromRGB(180, 180, 180)
 
     activePage.Visible = true
-    activeBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 85)
+    if activeBtn == tab1Btn then
+        activeBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+    elseif activeBtn == tab2Btn then
+        activeBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 216)
+    elseif activeBtn == tab3Btn then
+        activeBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+    else
+        activeBtn.BackgroundColor3 = Color3.fromRGB(0, 204, 255)
+    end
     activeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 end
 
-mainTabBtn.MouseButton1Click:Connect(function() switchTab(mainTabBtn, mainTabPage) end)
-espTabBtn.MouseButton1Click:Connect(function() switchTab(espTabBtn, espTabPage) end)
-testTabBtn.MouseButton1Click:Connect(function() switchTab(testTabBtn, testTabPage) end)
+tab1Btn.MouseButton1Click:Connect(function() switchTab(tab1Btn, page1) end)
+tab2Btn.MouseButton1Click:Connect(function() switchTab(tab2Btn, page2) end)
+tab3Btn.MouseButton1Click:Connect(function() switchTab(tab3Btn, page3) end)
+tab4Btn.MouseButton1Click:Connect(function() switchTab(tab4Btn, page4) end)
 
 circleBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
@@ -712,8 +637,8 @@ end)
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB V7.1",
-        Text = "Đã gộp ESP Rương và Vật phẩm vào làm 1!",
-        Duration = 4
+        Title = "MOTE HUB BETA 1.0",
+        Text = "Đã cập nhật Tab Admin Info: By Mờ Tê!",
+        Duration = 5
     })
 end)
