@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 1.2 - SỬA LỖI KEY, TỦ ĐÃ MỞ & SÁCH/CẦU CHÌ
+-- MOTE HUB BETA 1.3 - FIX AUTO LOOT, ESP SÁCH & NOTICE FIGURE
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -24,7 +24,7 @@ local Flags = {
     ESPMonster = true,
     ESPPlayer = false,
     DoorsJump = false,
-    AutoLootAndDoor = true,
+    AutoLootAndDoor = false, -- Đặt mặc định Tắt để tránh tự nhặt khi chưa muốn
     AutoMinigame = true,
     FlyCarpet = false,
     MonsterNotify = true
@@ -107,7 +107,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- 2. LOOT & CỬA (ĐÃ TỐI ƯU KIỂM TRA TỦ ĐÃ MỞ)
+-- 2. LOOT & CỬA (FIX TRIỆT ĐỂ BẮT/TẮT DỪNG HẲN)
 --------------------------------------------------
 local carpetPart = Instance.new("Part")
 carpetPart.Name = "MoteHub_MagicCarpet"; carpetPart.Size = Vector3.new(6, 0.4, 6); carpetPart.Material = Enum.Material.Neon; carpetPart.Color = Color3.fromRGB(160, 32, 240); carpetPart.Transparency = 0.3; carpetPart.Anchored = true; carpetPart.CanCollide = true
@@ -123,12 +123,10 @@ RunService.RenderStepped:Connect(function()
     else carpetPart.Parent = nil end
 end)
 
--- Kiểm tra xem ProximityPrompt hoặc Tủ có còn khả năng tương tác không
 local function isPromptValid(prompt)
     if not prompt or not prompt.Parent or not prompt.Enabled then return false end
     
     local parent = prompt.Parent
-    -- Kiểm tra nếu tủ đã mở (Các thuộc tính Attribute thường dùng trong Doors)
     if parent:GetAttribute("Opened") == true or parent:GetAttribute("State") == true or parent:GetAttribute("Open") == true then
         return false
     end
@@ -145,14 +143,12 @@ local function scanAndClassifyObject(prompt)
     local parentName = parent.Name:lower()
     local modelName = parent.Parent and parent.Parent.Name:lower() or ""
 
-    -- Kiểm tra khóa cửa
     if parentName:find("lock") or modelName:find("lock") or parentName:find("door") or modelName:find("door") then
         if prompt.ActionText:lower():find("unlock") or prompt.ObjectText:lower():find("lock") or prompt.ActionText:lower():find("mở") then
             return "DOOR_LOCKED"
         end
     end
 
-    -- Kiểm tra Tủ / Rương
     if parentName:find("drawer") or parentName:find("knob") or parentName:find("cabinet") or parentName:find("dresser") or parentName:find("desk") then
         return "CONTAINER"
     end
@@ -160,7 +156,6 @@ local function scanAndClassifyObject(prompt)
         return "CONTAINER"
     end
 
-    -- Vật phẩm / Vàng
     if parentName:find("gold") or parentName:find("coin") or modelName:find("gold") or prompt.ActionText:lower():find("take") or prompt.ActionText:lower():find("lấy") then
         return "LOOT_ITEM"
     end
@@ -170,34 +165,37 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(0.2)
-        if Flags.AutoLootAndDoor and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = LocalPlayer.Character.HumanoidRootPart
-            -- Kiểm tra chính xác xem nhân vật hoặc balo có mang Chìa Khóa không
-            local hasKey = false
-            for _, item in ipairs(LocalPlayer.Character:GetChildren()) do
-                if item:IsA("Tool") and (item.Name:find("Key") or item.Name:find("KeyObtain")) then hasKey = true break end
-            end
-            if not hasKey and LocalPlayer:FindFirstChild("Backpack") then
-                for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        task.wait(0.25)
+        -- KIỂM TRA CHẶT CHẼ FLAG: Nếu TẮT thì bỏ qua hoàn toàn, không thực thi tương tác
+        if Flags.AutoLootAndDoor then
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+                local hasKey = false
+                for _, item in ipairs(LocalPlayer.Character:GetChildren()) do
                     if item:IsA("Tool") and (item.Name:find("Key") or item.Name:find("KeyObtain")) then hasKey = true break end
                 end
-            end
+                if not hasKey and LocalPlayer:FindFirstChild("Backpack") then
+                    for _, item in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                        if item:IsA("Tool") and (item.Name:find("Key") or item.Name:find("KeyObtain")) then hasKey = true break end
+                    end
+                end
 
-            for _, prompt in ipairs(Workspace:GetDescendants()) do
-                if prompt:IsA("ProximityPrompt") then
-                    local category = scanAndClassifyObject(prompt)
-                    if category then
-                        local targetPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
-                        if targetPart then
-                            local dist = (hrp.Position - targetPart.Position).Magnitude
-                            if category == "DOOR_LOCKED" and hasKey then
-                                if dist <= prompt.MaxActivationDistance + 4 then
-                                    pcall(function() fireproximityprompt(prompt) end)
-                                end
-                            elseif category == "CONTAINER" or category == "LOOT_ITEM" then
-                                if dist <= prompt.MaxActivationDistance then
-                                    pcall(function() fireproximityprompt(prompt) end)
+                for _, prompt in ipairs(Workspace:GetDescendants()) do
+                    if not Flags.AutoLootAndDoor then break end -- Kiểm tra ngắt giữa vòng lặp nếu vừa tắt nút
+                    if prompt:IsA("ProximityPrompt") then
+                        local category = scanAndClassifyObject(prompt)
+                        if category then
+                            local targetPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                            if targetPart then
+                                local dist = (hrp.Position - targetPart.Position).Magnitude
+                                if category == "DOOR_LOCKED" and hasKey then
+                                    if dist <= prompt.MaxActivationDistance + 3 then
+                                        pcall(function() fireproximityprompt(prompt) end)
+                                    end
+                                elseif category == "CONTAINER" or category == "LOOT_ITEM" then
+                                    if dist <= prompt.MaxActivationDistance then
+                                        pcall(function() fireproximityprompt(prompt) end)
+                                    end
                                 end
                             end
                         end
@@ -209,7 +207,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- 3. ESP & CẢNH BÁO (ĐÃ SỬA SÁCH/CẦU CHÌ TỰ MẤT KHI LỤM)
+-- 3. ESP & CẢNH BÁO QUÁI (SỬA LỖI ESP SÁCH KHÔNG XÓA KHI NHẶT)
 --------------------------------------------------
 local ImportantItems = {
     ["KeyObtain"] = "🔑 Chìa Khóa", ["Key"] = "🔑 Chìa Khóa", ["MasterKey"] = "🔑 Chìa Khóa Vạn Năng",
@@ -225,7 +223,7 @@ local ImportantItems = {
 local MonsterInfo = {
     ["RushMoving"] = { Name = "Rush", Advice = "Trốn vào tủ hoặc hầm ngay!" },
     ["AmbushMoving"] = { Name = "Ambush", Advice = "Trốn tủ và chuẩn bị ra/vào lại!" },
-    ["FigureRig"] = { Name = "Figure", Advice = "CẢNH BÁO: Đang trong tầm nghe/thấy của Figure!" },
+    ["FigureRig"] = { Name = "Figure", Advice = "CẢNH BÁO: Đang ở sát Figure!" },
     ["Screech"] = { Name = "Screech", Advice = "Quay camera nhìn thẳng vào nó!" },
     ["Eyes"] = { Name = "Eyes", Advice = "Đừng nhìn thẳng vào nó!" },
     ["Halt"] = { Name = "Halt", Advice = "Quay đầu đi ngược lại!" },
@@ -266,7 +264,7 @@ local function processObject(obj)
             end
         end
 
-        -- ESP Rương (Tự động mất khi Rương/Tủ đã mở)
+        -- ESP Rương
         if (obj.Name == "Chest" or (obj.Name:find("Chest") and not obj.Name:find("Monster"))) and not obj:FindFirstChild("Mote_ChestTag", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then
@@ -277,9 +275,7 @@ local function processObject(obj)
                 billboard.Parent = targetPart
                 task.spawn(function()
                     while obj and obj.Parent do
-                        -- Kiểm tra nếu rương/tủ đã bị mở thì ẩn/xóa ESP ngay
-                        local isOpened = obj:GetAttribute("Opened") or obj:GetAttribute("Open") or obj:GetAttribute("State")
-                        if isOpened then
+                        if obj:GetAttribute("Opened") or obj:GetAttribute("Open") or obj:GetAttribute("State") then
                             billboard:Destroy()
                             break
                         end
@@ -294,7 +290,7 @@ local function processObject(obj)
                 end)
             end
         
-        -- ESP Vật Phẩm / Sách màn 50 / Cầu chì màn 100 (Tự động xóa ESP khi bị lụm)
+        -- ESP Sách màn 50 / Cầu chì màn 100 (TỰ ĐỘNG XÓA CHÍNH XÁC KHI NHẶT)
         elseif ImportantItems[obj.Name] and not obj:FindFirstChild("Mote_ItemTag", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then
@@ -304,16 +300,25 @@ local function processObject(obj)
                 label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1; label.TextColor3 = Color3.fromRGB(0, 255, 255); label.TextStrokeTransparency = 0; label.TextSize = 12; label.Font = Enum.Font.SourceSansBold; label.Parent = billboard
                 billboard.Parent = targetPart
 
-                -- Đổi màu nổi bật cho Sách và Cầu chì
                 if obj.Name:find("Book") or obj.Name:find("Fuse") then
-                    label.TextColor3 = Color3.fromRGB(255, 105, 180) -- Màu hồng tím nổi bật
+                    label.TextColor3 = Color3.fromRGB(255, 105, 180)
                 end
+
+                -- Đăng ký ngắt lập tức khi rời khỏi Workspace
+                local removeConn
+                removeConn = obj.AncestryChanged:Connect(function(_, parent)
+                    if not parent or not obj:IsDescendantOf(Workspace) then
+                        pcall(function() billboard:Destroy() end)
+                        if removeConn then removeConn:Disconnect() end
+                    end
+                end)
 
                 task.spawn(function()
                     while obj and obj.Parent and obj:IsDescendantOf(Workspace) do
-                        -- Nếu vật phẩm không còn nằm trong Workspace (đã bị lụm vào inventory)
-                        if not obj:IsDescendantOf(Workspace) then
+                        -- Kiểm tra thuộc tính đã nhặt của DOORS
+                        if obj:GetAttribute("Picked") or obj:GetAttribute("Opened") then
                             billboard:Destroy()
+                            if removeConn then removeConn:Disconnect() end
                             break
                         end
 
@@ -321,10 +326,12 @@ local function processObject(obj)
                             billboard.Enabled = true
                             local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
                             label.Text = string.format("%s\n[%d studs]", ImportantItems[obj.Name], dist)
-                        else billboard.Enabled = false end
-                        task.wait(0.25)
+                        else 
+                            billboard.Enabled = false 
+                        end
+                        task.wait(0.2)
                     end
-                    billboard:Destroy()
+                    pcall(function() billboard:Destroy() end)
                 end)
             end
         end
@@ -354,7 +361,7 @@ local function processObject(obj)
                     if not parent then
                         if Flags.MonsterNotify then
                             pcall(function()
-                                StarterGui:SetCore("SendNotification", { Title = "✅ AMBUSH ĐÃ ĐI RỒI!", Text = "Ambush đã di chuyển đi xa, an toàn!", Duration = 5 })
+                                StarterGui:SetCore("SendNotification", { Title = "✅ AMBUSH ĐÃ ĐI RỜI!", Text = "Ambush đã di chuyển đi xa, an toàn!", Duration = 5 })
                             end)
                         end
                         if conn then conn:Disconnect() end
@@ -397,31 +404,44 @@ for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- CẢNH BÁO PHÁT HIỆN FIGURE DỰA TRÊN THỜI GIAN THỰC (STUDS DETECT)
+-- SỬA NOTICE FIGURE (QUÉT CHÍNH XÁC KHI FIGURE Ở GẦN)
 --------------------------------------------------
 task.spawn(function()
-    local FIGURE_DETECTION_RADIUS = 22 -- Bán kính Studs Figure nghe/phát hiện bạn
+    local FIGURE_DETECTION_RADIUS = 25 -- Bán kính Studs cảnh báo nguy hiểm từ Figure
 
-    while task.wait(0.25) do
+    while task.wait(0.2) do
         if Flags.MonsterNotify and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local figure = Workspace:FindFirstChild("FigureRig", true)
-            if figure and figure:FindFirstChild("HumanoidRootPart") then
-                local dist = (LocalPlayer.Character.HumanoidRootPart.Position - figure.HumanoidRootPart.Position).Magnitude
-                
-                -- Nếu đi vào bán kính Figure có thể phát hiện
-                if dist <= FIGURE_DETECTION_RADIUS then
-                    if not figureWarningNotified then
-                        figureWarningNotified = true
-                        pcall(function()
-                            StarterGui:SetCore("SendNotification", {
-                                Title = "🚨 CẢNH BÁO FIGURE!",
-                                Text = string.format("Figure đang ở sát bạn (%d Studs)! NGỒI XUỐNG VÀ ĐI RÓN RÉN!", math.floor(dist)),
-                                Duration = 4
-                            })
-                        end)
+            local hrp = LocalPlayer.Character.HumanoidRootPart
+            local figureModel = nil
+
+            -- Quét tìm Figure trong Workspace
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v:IsA("Model") and (v.Name == "FigureRig" or v.Name:find("Figure")) then
+                    if v:FindFirstChild("HumanoidRootPart") or v:FindFirstChildWhichIsA("BasePart") then
+                        figureModel = v
+                        break
                     end
-                else
-                    figureWarningNotified = false
+                end
+            end
+
+            if figureModel then
+                local figPart = figureModel:FindFirstChild("HumanoidRootPart") or figureModel:FindFirstChildWhichIsA("BasePart")
+                if figPart then
+                    local dist = (hrp.Position - figPart.Position).Magnitude
+                    if dist <= FIGURE_DETECTION_RADIUS then
+                        if not figureWarningNotified then
+                            figureWarningNotified = true
+                            pcall(function()
+                                StarterGui:SetCore("SendNotification", {
+                                    Title = "🚨 CẢNH BÁO FIGURE!",
+                                    Text = string.format("Figure đang ở sát bạn (%d Studs)! NGỒI XUỐNG VÀ ĐI RÓN RÉN!", math.floor(dist)),
+                                    Duration = 4
+                                })
+                            end)
+                        end
+                    else
+                        figureWarningNotified = false
+                    end
                 end
             else
                 figureWarningNotified = false
@@ -544,7 +564,7 @@ end)
 -- 6. GIAO DIỆN HUB
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta12"
+screenGui.Name = "MoteHub_Beta13"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -584,7 +604,7 @@ makeDraggable(mainFrame)
 local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.new(0, 12); frameCorner.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 38); titleLabel.BackgroundColor3 = Color3.fromRGB(12, 14, 18); titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0); titleLabel.Text = "MOTE HUB BETA 1.2"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 38); titleLabel.BackgroundColor3 = Color3.fromRGB(12, 14, 18); titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0); titleLabel.Text = "MOTE HUB BETA 1.3"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 12); titleCorner.Parent = titleLabel
 
 local tabContainer = Instance.new("Frame")
@@ -713,7 +733,7 @@ fbLabel.Size = UDim2.new(0.9, 0, 0, 40); fbLabel.Position = UDim2.new(0.05, 0, 0
 local fbC = Instance.new("UICorner"); fbC.CornerRadius = UDim.new(0, 6); fbC.Parent = fbLabel
 
 local versionLabel = Instance.new("TextLabel")
-versionLabel.Size = UDim2.new(0.9, 0, 0, 35); versionLabel.Position = UDim2.new(0.05, 0, 0.66, 0); versionLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52); versionLabel.Text = "  Phiên Bản: Mote Hub Beta 1.2"; versionLabel.Font = Enum.Font.SourceSansBold; versionLabel.TextColor3 = Color3.fromRGB(255, 255, 255); versionLabel.TextSize = 12; versionLabel.TextXAlignment = Enum.TextXAlignment.Left; versionLabel.Parent = infoContainer
+versionLabel.Size = UDim2.new(0.9, 0, 0, 35); versionLabel.Position = UDim2.new(0.05, 0, 0.66, 0); versionLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52); versionLabel.Text = "  Phiên Bản: Mote Hub Beta 1.3"; versionLabel.Font = Enum.Font.SourceSansBold; versionLabel.TextColor3 = Color3.fromRGB(255, 255, 255); versionLabel.TextSize = 12; versionLabel.TextXAlignment = Enum.TextXAlignment.Left; versionLabel.Parent = infoContainer
 local vC = Instance.new("UICorner"); vC.CornerRadius = UDim.new(0, 6); vC.Parent = versionLabel
 
 local function switchTab(activeBtn, activePage)
@@ -740,8 +760,8 @@ circleBtn.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 1.2",
-        Text = "Đã cập nhật sửa lỗi Mở cửa, Tủ đã mở & Sách màn 50/100!",
+        Title = "MOTE HUB BETA 1.3",
+        Text = "Đã sửa thành công Nút Tắt Loot, ESP Sách & Notice Figure!",
         Duration = 5
     })
 end)
