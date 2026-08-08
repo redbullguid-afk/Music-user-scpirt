@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 1.6 - FIX ESP PLAYER, CAMERA & MINECRAFT FLY
+-- MOTE HUB BETA 1.7 - FIX ESP TRACER LINE & FLY MODE
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -62,8 +62,8 @@ local Themes = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoLoot = "4. Auto Mở Cửa Key & Loot", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 1.6" },
-    ENG = { Main = "Main", ESP = "ESP", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify", Fullbright = "3. Fullbright", AutoLoot = "4. Auto Key & Loot", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 1.6" }
+    VIE = { Main = "Main", ESP = "ESP", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoLoot = "4. Auto Mở Cửa Key & Loot", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 1.7" },
+    ENG = { Main = "Main", ESP = "ESP", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify", Fullbright = "3. Fullbright", AutoLoot = "4. Auto Key & Loot", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 1.7" }
 }
 
 --------------------------------------------------
@@ -110,7 +110,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 2. TÍNH NĂNG GÓC NHÌN THỨ 3 (FIX KHÔNG KHÓA CAMERA)
+-- 2. TÍNH NĂNG GÓC NHÌN THỨ 3 (FIX CAMERA KHÔNG KHÓA)
 --------------------------------------------------
 local savedMinZoom = LocalPlayer.CameraMinZoomDistance
 local savedMaxZoom = LocalPlayer.CameraMaxZoomDistance
@@ -127,7 +127,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 3. HỆ THỐNG ESP PLAYER CHUYÊN NGHIỆP (NAME, BOX, STUDS, TRACER)
+-- 3. HỆ THỐNG ESP PLAYER CHUẨN XÁC (FIX LỆCH SỢI DÂY)
 --------------------------------------------------
 local PlayerESPContainer = {}
 
@@ -164,13 +164,15 @@ Players.PlayerRemoving:Connect(removePlayerESP)
 RunService.RenderStepped:Connect(function()
     for plr, esp in pairs(PlayerESPContainer) do
         if Flags.ESPPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = plr.Character.HumanoidRootPart
-            local head = plr.Character:FindFirstChild("Head") or hrp
-            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local myHRP = LocalPlayer.Character.HumanoidRootPart
+            local targetHRP = plr.Character.HumanoidRootPart
+            local head = plr.Character:FindFirstChild("Head") or targetHRP
+            
+            local pos, onScreen = Camera:WorldToViewportPoint(targetHRP.Position)
             
             if onScreen then
                 local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
-                local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                local legPos = Camera:WorldToViewportPoint(targetHRP.Position - Vector3.new(0, 3, 0))
                 local height = math.abs(headPos.Y - legPos.Y)
                 local width = height / 1.8
                 
@@ -179,13 +181,16 @@ RunService.RenderStepped:Connect(function()
                 esp.Box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
                 esp.Box.Visible = true
                 
-                -- Sợi dây nối Tracer
-                esp.Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                esp.Line.To = Vector2.new(pos.X, pos.Y + height / 2)
+                -- Sợi dây nối Tracer chuẩn
+                -- Tính điểm xuất phát ngay tại giữa mép dưới màn hình (chuẩn theo camera viewport)
+                local screenCenterBottom = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y - 10)
+                
+                esp.Line.From = screenCenterBottom
+                esp.Line.To = Vector2.new(pos.X, legPos.Y)
                 esp.Line.Visible = true
                 
                 -- Tên & Khoảng cách
-                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
+                local dist = math.floor((myHRP.Position - targetHRP.Position).Magnitude)
                 esp.Text.Text = string.format("%s\n[%d studs]", plr.DisplayName, dist)
                 esp.Text.Position = Vector2.new(pos.X, pos.Y - height / 2 - 28)
                 esp.Text.Visible = true
@@ -199,7 +204,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 4. LOGIC AUTO LOOT & CỬA (CHUẨN)
+-- 4. LOGIC AUTO LOOT & CỬA
 --------------------------------------------------
 local function isPromptValid(prompt)
     if not prompt or not prompt.Parent or not prompt.Enabled then return false end
@@ -391,7 +396,7 @@ Workspace.DescendantAdded:Connect(processObject)
 -- THIẾT KẾ GIAO DIỆN NGANG (HORIZONTAL UI)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta16"
+screenGui.Name = "MoteHub_Beta17"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -428,7 +433,7 @@ local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.ne
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 1.6"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 1.7"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -617,7 +622,7 @@ createToggleSwitch(pages[1], Translations[Flags.Language].AutoLoot, "AutoLootAnd
 createToggleSwitch(pages[2], "ESP Cửa (Door)", "ESPDoor", 5)
 createToggleSwitch(pages[2], "ESP Vật Phẩm (Items)", "ESPItems", 40)
 createToggleSwitch(pages[2], "ESP Quái Vật (Monster)", "ESPMonster", 75)
-createToggleSwitch(pages[2], "ESP Người Chơi (Box + Line)", "ESPPlayer", 110)
+createToggleSwitch(pages[2], "ESP Người Chơi (Box/Line/Dist)", "ESPPlayer", 110)
 
 -- TAB 3: THỬ NGHIỆM
 createToggleSwitch(pages[3], Translations[Flags.Language].NoClip, "NoClip", 5)
@@ -657,7 +662,7 @@ btnVie.Size = UDim2.new(0.46, 0, 0, 25); btnVie.Position = UDim2.new(0, 0, 0, 85
 local vC = Instance.new("UICorner"); vC.CornerRadius = UDim.new(0, 4); vC.Parent = btnVie
 
 local btnEng = Instance.new("TextButton")
-btnEng.Size = UDim2.new(0.46, 0, 0, 25); btnEng.Position = UDim2.new(0.5, 0, 0, 85); btnEng.BackgroundColor3 = Color3.fromRGB(35, 35, 35); btnEng.TextColor3 = Color3.fromRGB(255, 255, 255); btnEng.Text = "English"; btnEng.Font = Enum.Font.SourceSansBold; btnEng.TextSize = 12; btnEng.Parent = pages[5]
+btnEng.Size = UDim2.new(0.5, 0, 0, 25); btnEng.Position = UDim2.new(0.5, 0, 0, 85); btnEng.BackgroundColor3 = Color3.fromRGB(35, 35, 35); btnEng.TextColor3 = Color3.fromRGB(255, 255, 255); btnEng.Text = "English"; btnEng.Font = Enum.Font.SourceSansBold; btnEng.TextSize = 12; btnEng.Parent = pages[5]
 local eC = Instance.new("UICorner"); eC.CornerRadius = UDim.new(0, 4); eC.Parent = btnEng
 
 local function refreshLanguage()
@@ -676,8 +681,8 @@ applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 1.6",
-        Text = "Đã cập nhật ESP Player 2D (Box/Line/Dist) & Chế độ Bay Minecraft!",
+        Title = "MOTE HUB BETA 1.7",
+        Text = "Đã Fix chuẩn xác sợi dây ESP nối từ mép dưới màn hình!",
         Duration = 5
     })
 end)
