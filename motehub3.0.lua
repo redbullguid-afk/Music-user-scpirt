@@ -1,6 +1,6 @@
 -- ==================================================
--- MOTE HUB BETA 1.0 - OFFICIAL RELEASE (SMART FULLBRIGHT ADJUSTED)
--- Full Features + Player ESP + Smart Auto Loot + Dynamic Ambient Lighting
+-- MOTE HUB BETA 1.0 - SMART SCANNING & AUTO LOOT
+-- Unified Door & Loot System + Smart Object Scanning
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -19,13 +19,13 @@ local Camera = Workspace.CurrentCamera
 local Flags = {
     AntiAFK = true,
     SpeedHack = false,
-    SmartFullbright = true, -- Bật/Tắt nhìn trong bóng tối thông minh
+    SmartFullbright = true,
     ESPDoor = true,
     ESPItems = true,
     ESPMonster = true,
     ESPPlayer = false,
     DoorsJump = false,
-    SemiAutoLoot = true,
+    AutoLootAndDoor = true, -- Gộp: Tự động nhặt đồ & Mở cửa chìa khóa
     AutoMinigame = true,
     FlyCarpet = false,
     MonsterNotify = true
@@ -35,7 +35,7 @@ local SpeedMultiplier = 1.3
 local lastSeekNotifyTime = 0
 local figureDetectedNotified = false
 
--- Lưu trữ thiết lập ánh sáng mặc định nguyên bản của game
+-- Lưu trữ thiết lập ánh sáng mặc định NGUYÊN BẢN ban đầu của game
 local OriginalLighting = {
     Brightness = Lighting.Brightness,
     ClockTime = Lighting.ClockTime,
@@ -46,7 +46,7 @@ local OriginalLighting = {
 }
 
 --------------------------------------------------
--- 1. TÍNH NĂNG BỔ TRỢ (ANTI-AFK, SPEED, SMART FULLBRIGHT)
+-- 1. TÍNH NĂNG BỔ TRỢ & SMART FULLBRIGHT
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -73,27 +73,27 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- HỆ THỐNG NHÌN TRONG BÓNG TỐI THÔNG MINH (ĐÃ ĐIỀU CHỈNH THEO YÊU CẦU)
 local isFullbrightApplied = false
 
 task.spawn(function()
     while task.wait(0.3) do
         if Flags.SmartFullbright then
             pcall(function()
-                -- Kiểm tra xem có đang ở trong phòng tối hay không
-                local isDarkRoom = Workspace:FindFirstChild("Ambience_Dark", true) or Lighting.Ambient.R < 0.15 or Lighting.OutdoorAmbient.R < 0.15
+                local currentAmb = Lighting.Ambient
+                local isDarkRoom = Workspace:FindFirstChild("Ambience_Dark", true) 
+                    or (currentAmb.R < 0.1 and currentAmb.G < 0.1 and currentAmb.B < 0.1)
 
                 if isDarkRoom then
-                    -- BẬT KHI Ở PHÒNG TỐI: Giúp nhìn rõ nhưng Brightness đã hạ xuống mức 1.2 (dịu mắt hơn)
-                    isFullbrightApplied = true
-                    Lighting.Brightness = 1.2 
-                    Lighting.ClockTime = 14
-                    Lighting.FogEnd = 1000000
-                    Lighting.GlobalShadows = false
-                    Lighting.Ambient = Color3.fromRGB(200, 200, 200)
-                    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+                    if not isFullbrightApplied then
+                        isFullbrightApplied = true
+                        Lighting.Brightness = 1.2
+                        Lighting.ClockTime = 14
+                        Lighting.FogEnd = 1000000
+                        Lighting.GlobalShadows = false
+                        Lighting.Ambient = Color3.fromRGB(180, 180, 180)
+                        Lighting.OutdoorAmbient = Color3.fromRGB(180, 180, 180)
+                    end
                 else
-                    -- PHÒNG SÁNG: Trả về ánh sáng giữ nguyên ban đầu của game
                     if isFullbrightApplied then
                         isFullbrightApplied = false
                         Lighting.Brightness = OriginalLighting.Brightness
@@ -106,7 +106,6 @@ task.spawn(function()
                 end
             end)
         else
-            -- TẮT TÍNH NĂNG: Khôi phục và GIỮ NGUYÊN ánh sáng mặc định của game
             if isFullbrightApplied then
                 isFullbrightApplied = false
                 pcall(function()
@@ -123,7 +122,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- 2. THẢM BAY & AUTO LOOT
+-- 2. HỆ THỐNG QUÉT THÔNG MINH & LOOT/CỬA TỔNG HỢP (DELAY 0.3S)
 --------------------------------------------------
 local carpetPart = Instance.new("Part")
 carpetPart.Name = "MoteHub_MagicCarpet"
@@ -149,42 +148,63 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local function isValidLootPrompt(prompt)
-    if not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
+-- CHỨC NĂNG QUÉT PHÂN BIỆT ĐỐI TƯỢNG (SMART SCANNING)
+local function scanAndClassifyObject(prompt)
+    if not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return nil end
     local parent = prompt.Parent
-    if not parent then return false end
+    if not parent then return nil end
 
     local parentName = parent.Name:lower()
     local modelName = parent.Parent and parent.Parent.Name:lower() or ""
     local promptText = (prompt.ObjectText .. " " .. prompt.ActionText):lower()
 
-    if parentName:find("gold") or parentName:find("coin") or modelName:find("gold") or modelName:find("coin") or promptText:find("gold") or promptText:find("coin") or promptText:find("xu") then
-        return true
+    -- 1. Phân loại: Cửa khóa cần chìa
+    if parentName:find("door") or modelName:find("door") or promptText:find("unlock") or promptText:find("key") or promptText:find("mở") then
+        return "DOOR_LOCKED"
     end
 
+    -- 2. Phân loại: Tủ, kệ, ngăn kéo
     if parentName:find("drawer") or parentName:find("knob") or parentName:find("cabinet") or parentName:find("dresser") or parentName:find("desk") or parentName:find("locker") or parentName:find("chest") then
-        return true
+        return "CONTAINER"
     end
     if modelName:find("drawer") or modelName:find("cabinet") or modelName:find("dresser") or modelName:find("desk") or modelName:find("locker") or modelName:find("chest") then
-        return true
+        return "CONTAINER"
     end
 
-    return false
+    -- 3. Phân loại: Tiền, Vàng, Vật phẩm nhặt được
+    if parentName:find("gold") or parentName:find("coin") or modelName:find("gold") or modelName:find("coin") or promptText:find("gold") or promptText:find("coin") or promptText:find("xu") or promptText:find("take") or promptText:find("lấy") then
+        return "LOOT_ITEM"
+    end
+
+    return nil
 end
 
+-- VÒNG LẶP XỬ LÝ LOOT & MỞ CỬA CÓ DELAY 0.3S
 task.spawn(function()
-    while task.wait(0.1) do
-        if Flags.SemiAutoLoot and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    while true do
+        task.wait(0.3) -- Giảm thời gian chờ xuống đúng 0.3s theo yêu cầu
+        if Flags.AutoLootAndDoor and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = LocalPlayer.Character.HumanoidRootPart
-            for _, desc in ipairs(Workspace:GetDescendants()) do
-                if isValidLootPrompt(desc) then
-                    local parentPart = desc.Parent:IsA("BasePart") and desc.Parent or desc.Parent:FindFirstChildWhichIsA("BasePart")
-                    if parentPart then
-                        local dist = (hrp.Position - parentPart.Position).Magnitude
-                        if dist <= desc.MaxActivationDistance then
-                            pcall(function() fireproximityprompt(desc) end)
-                            task.wait(0.9)
-                            break
+            local hasKey = LocalPlayer.Character:FindFirstChild("Key") or LocalPlayer.Backpack:FindFirstChild("Key") or LocalPlayer.Character:FindFirstChild("KeyObtain") or LocalPlayer.Backpack:FindFirstChild("KeyObtain")
+
+            for _, prompt in ipairs(Workspace:GetDescendants()) do
+                local category = scanAndClassifyObject(prompt)
+
+                if category then
+                    local targetPart = prompt.Parent:IsA("BasePart") and prompt.Parent or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+                    if targetPart then
+                        local dist = (hrp.Position - targetPart.Position).Magnitude
+
+                        -- Xử lý Cửa khóa
+                        if category == "DOOR_LOCKED" and hasKey then
+                            if dist <= prompt.MaxActivationDistance + 2 then
+                                pcall(function() fireproximityprompt(prompt) end)
+                            end
+                        -- Xử lý Tủ / Kệ / Vàng / Item
+                        elseif category == "CONTAINER" or category == "LOOT_ITEM" then
+                            if dist <= prompt.MaxActivationDistance then
+                                pcall(function() fireproximityprompt(prompt) end)
+                            end
                         end
                     end
                 end
@@ -346,18 +366,9 @@ local function createPlayerESP(player)
     if player == LocalPlayer then return end
 
     local text = Drawing.new("Text")
-    text.Size = 14
-    text.Center = true
-    text.Outline = true
-    text.OutlineColor = Color3.fromRGB(0, 0, 0)
-    text.Color = Color3.fromRGB(180, 100, 255)
-    text.Visible = false
-
+    text.Size = 14; text.Center = true; text.Outline = true; text.OutlineColor = Color3.fromRGB(0, 0, 0); text.Color = Color3.fromRGB(180, 100, 255); text.Visible = false
     local line = Drawing.new("Line")
-    line.Thickness = 1.5
-    line.Color = Color3.fromRGB(180, 100, 255)
-    line.Transparency = 0.8
-    line.Visible = false
+    line.Thickness = 1.5; line.Color = Color3.fromRGB(180, 100, 255); line.Transparency = 0.8; line.Visible = false
 
     PlayerESPObjects[player] = { Text = text, Line = line }
 end
@@ -402,7 +413,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 5. AUTO MINIGAME TỦ & CẢNH BÁO FIGURE CỰC GẦN
+-- 5. AUTO MINIGAME TỦ & CẢNH BÁO FIGURE
 --------------------------------------------------
 task.spawn(function()
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -477,45 +488,24 @@ local function makeDraggable(gui)
 end
 
 local circleBtn = Instance.new("TextButton")
-circleBtn.Size = UDim2.new(0, 52, 0, 52)
-circleBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
-circleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-circleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
-circleBtn.Text = "mote"
-circleBtn.Font = Enum.Font.GothamBold
-circleBtn.TextSize = 13
-circleBtn.Parent = screenGui
+circleBtn.Size = UDim2.new(0, 52, 0, 52); circleBtn.Position = UDim2.new(0.05, 0, 0.2, 0); circleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20); circleBtn.TextColor3 = Color3.fromRGB(255, 215, 0); circleBtn.Text = "mote"; circleBtn.Font = Enum.Font.GothamBold; circleBtn.TextSize = 13; circleBtn.Parent = screenGui
 makeDraggable(circleBtn)
 
 local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1, 0); btnCorner.Parent = circleBtn
 local btnStroke = Instance.new("UIStroke"); btnStroke.Color = Color3.fromRGB(255, 215, 0); btnStroke.Thickness = 2; btnStroke.Parent = circleBtn
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 280, 0, 390)
-mainFrame.Position = UDim2.new(0.35, 0, 0.2, 0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
-mainFrame.BorderSizePixel = 0
-mainFrame.Visible = false
-mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 280, 0, 390); mainFrame.Position = UDim2.new(0.35, 0, 0.2, 0); mainFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 28); mainFrame.BorderSizePixel = 0; mainFrame.Visible = false; mainFrame.Parent = screenGui
 makeDraggable(mainFrame)
 
 local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.new(0, 12); frameCorner.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 38)
-titleLabel.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
-titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-titleLabel.Text = "MOTE HUB BETA 1.0"
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = 14
-titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 38); titleLabel.BackgroundColor3 = Color3.fromRGB(12, 14, 18); titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0); titleLabel.Text = "MOTE HUB BETA 1.0"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 12); titleCorner.Parent = titleLabel
 
 local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(0.94, 0, 0, 30)
-tabContainer.Position = UDim2.new(0.03, 0, 0.12, 0)
-tabContainer.BackgroundTransparency = 1
-tabContainer.Parent = mainFrame
+tabContainer.Size = UDim2.new(0.94, 0, 0, 30); tabContainer.Position = UDim2.new(0.03, 0, 0.12, 0); tabContainer.BackgroundTransparency = 1; tabContainer.Parent = mainFrame
 
 local tab1Btn = Instance.new("TextButton")
 tab1Btn.Size = UDim2.new(0.23, 0, 1, 0); tab1Btn.BackgroundColor3 = Color3.fromRGB(255, 170, 0); tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255); tab1Btn.Text = "Bổ Trợ"; tab1Btn.Font = Enum.Font.SourceSansBold; tab1Btn.TextSize = 11; tab1Btn.Parent = tabContainer
@@ -526,7 +516,7 @@ tab2Btn.Size = UDim2.new(0.23, 0, 1, 0); tab2Btn.Position = UDim2.new(0.25, 0, 0
 local t2C = Instance.new("UICorner"); t2C.CornerRadius = UDim.new(0, 6); t2C.Parent = tab2Btn
 
 local tab3Btn = Instance.new("TextButton")
-tab3Btn.Size = UDim2.new(0.25, 0, 1, 0); tab3Btn.Position = UDim2.new(0.50, 0, 0, 0); tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab3Btn.TextColor3 = Color3.fromRGB(180, 180, 180); tab3Btn.Text = "Thử Nghiệm"; tab3Btn.Font = Enum.Font.SourceSansBold; tab3Btn.TextSize = 11; tab3Btn.Parent = tabContainer
+tab3Btn.Size = UDim2.new(0.25, 0, 1, 0); tab3Btn.Position = UDim2.new(0.50, 0, 0, 0); tab3Btn.BackgroundColor3 = Color3.fromRGB(40, 44, 52); tab3Btn.TextColor3 = Color3.fromRGB(180, 180, 180); tab3Btn.Text = "Tự Động"; tab3Btn.Font = Enum.Font.SourceSansBold; tab3Btn.TextSize = 11; tab3Btn.Parent = tabContainer
 local t3C = Instance.new("UICorner"); t3C.CornerRadius = UDim.new(0, 6); t3C.Parent = tab3Btn
 
 local tab4Btn = Instance.new("TextButton")
@@ -608,17 +598,9 @@ createCustomButton(page2, "ESP Vật Phẩm & Rương", "ESPItems", 50, Color3.f
 createCustomButton(page2, "ESP Quái Vật", "ESPMonster", 90, Color3.fromRGB(217, 4, 41))
 createCustomButton(page2, "ESP Người Chơi", "ESPPlayer", 130, Color3.fromRGB(114, 9, 183))
 
--- TAB 3: THỬ NGHIỆM
+-- TAB 3: TỰ ĐỘNG (GỘP MỞ CỬA & LOOT)
 local jumpButtonUI = Instance.new("TextButton")
-jumpButtonUI.Size = UDim2.new(0, 60, 0, 60)
-jumpButtonUI.Position = UDim2.new(0.05, 0, 0.05, 0)
-jumpButtonUI.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255)
-jumpButtonUI.Text = "NHẢY"
-jumpButtonUI.Font = Enum.Font.GothamBold
-jumpButtonUI.TextSize = 14
-jumpButtonUI.Visible = false
-jumpButtonUI.Parent = screenGui
+jumpButtonUI.Size = UDim2.new(0, 60, 0, 60); jumpButtonUI.Position = UDim2.new(0.05, 0, 0.05, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(138, 43, 226); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 14; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
 makeDraggable(jumpButtonUI)
 
 local jumpCorner = Instance.new("UICorner"); jumpCorner.CornerRadius = UDim.new(1, 0); jumpCorner.Parent = jumpButtonUI
@@ -640,65 +622,32 @@ doorsJumpBtn.MouseButton1Click:Connect(function()
     jumpButtonUI.Visible = Flags.DoorsJump
 end)
 
-createCustomButton(page3, "Tự Nhặt Đồ / Mở Cửa", "SemiAutoLoot", 50, Color3.fromRGB(16, 185, 129))
+-- NÚT TÍNH NĂNG GỘP CỦA TỰ ĐỘNG
+createCustomButton(page3, "Auto Mở Cửa Key & Auto Loot (0.3s)", "AutoLootAndDoor", 50, Color3.fromRGB(16, 185, 129))
 createCustomButton(page3, "Tự Chơi Minigame Tủ", "AutoMinigame", 90, Color3.fromRGB(245, 158, 11))
 createCustomButton(page3, "Thảm Bay (Fly)", "FlyCarpet", 130, Color3.fromRGB(99, 102, 241))
 createCustomButton(page3, "Cảnh Báo Thông Minh", "MonsterNotify", 170, Color3.fromRGB(239, 68, 68))
 
 -- TAB 4: INFO
 local infoContainer = Instance.new("Frame")
-infoContainer.Size = UDim2.new(0.88, 0, 0.88, 0)
-infoContainer.Position = UDim2.new(0.06, 0, 0.04, 0)
-infoContainer.BackgroundColor3 = Color3.fromRGB(28, 32, 42)
-infoContainer.Parent = page4
+infoContainer.Size = UDim2.new(0.88, 0, 0.88, 0); infoContainer.Position = UDim2.new(0.06, 0, 0.04, 0); infoContainer.BackgroundColor3 = Color3.fromRGB(28, 32, 42); infoContainer.Parent = page4
 
 local infoCorner = Instance.new("UICorner"); infoCorner.CornerRadius = UDim.new(0, 10); infoCorner.Parent = infoContainer
 local infoStroke = Instance.new("UIStroke"); infoStroke.Color = Color3.fromRGB(0, 204, 255); infoStroke.Thickness = 1.5; infoStroke.Parent = infoContainer
 
 local adminTitle = Instance.new("TextLabel")
-adminTitle.Size = UDim2.new(1, 0, 0, 30)
-adminTitle.Position = UDim2.new(0, 0, 0.05, 0)
-adminTitle.BackgroundTransparency = 1
-adminTitle.Text = "👑 THÔNG TIN ADMIN 👑"
-adminTitle.Font = Enum.Font.GothamBold
-adminTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
-adminTitle.TextSize = 14
-adminTitle.Parent = infoContainer
+adminTitle.Size = UDim2.new(1, 0, 0, 30); adminTitle.Position = UDim2.new(0, 0, 0.05, 0); adminTitle.BackgroundTransparency = 1; adminTitle.Text = "👑 THÔNG TIN ADMIN 👑"; adminTitle.Font = Enum.Font.GothamBold; adminTitle.TextColor3 = Color3.fromRGB(255, 215, 0); adminTitle.TextSize = 14; adminTitle.Parent = infoContainer
 
 local authorLabel = Instance.new("TextLabel")
-authorLabel.Size = UDim2.new(0.9, 0, 0, 40)
-authorLabel.Position = UDim2.new(0.05, 0, 0.22, 0)
-authorLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52)
-authorLabel.Text = "  Tác Giả: By Mờ Tê"
-authorLabel.Font = Enum.Font.SourceSansBold
-authorLabel.TextColor3 = Color3.fromRGB(0, 255, 204)
-authorLabel.TextSize = 14
-authorLabel.TextXAlignment = Enum.TextXAlignment.Left
-authorLabel.Parent = infoContainer
+authorLabel.Size = UDim2.new(0.9, 0, 0, 40); authorLabel.Position = UDim2.new(0.05, 0, 0.22, 0); authorLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52); authorLabel.Text = "  Tác Giả: By Mờ Tê"; authorLabel.Font = Enum.Font.SourceSansBold; authorLabel.TextColor3 = Color3.fromRGB(0, 255, 204); authorLabel.TextSize = 14; authorLabel.TextXAlignment = Enum.TextXAlignment.Left; authorLabel.Parent = infoContainer
 local aC = Instance.new("UICorner"); aC.CornerRadius = UDim.new(0, 6); aC.Parent = authorLabel
 
 local fbLabel = Instance.new("TextLabel")
-fbLabel.Size = UDim2.new(0.9, 0, 0, 40)
-fbLabel.Position = UDim2.new(0.05, 0, 0.44, 0)
-fbLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52)
-fbLabel.Text = "  Facebook: Nguyễn minh tân"
-fbLabel.Font = Enum.Font.SourceSansBold
-fbLabel.TextColor3 = Color3.fromRGB(24, 119, 242)
-fbLabel.TextSize = 13
-fbLabel.TextXAlignment = Enum.TextXAlignment.Left
-fbLabel.Parent = infoContainer
+fbLabel.Size = UDim2.new(0.9, 0, 0, 40); fbLabel.Position = UDim2.new(0.05, 0, 0.44, 0); fbLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52); fbLabel.Text = "  Facebook: Nguyễn minh tân"; fbLabel.Font = Enum.Font.SourceSansBold; fbLabel.TextColor3 = Color3.fromRGB(24, 119, 242); fbLabel.TextSize = 13; fbLabel.TextXAlignment = Enum.TextXAlignment.Left; fbLabel.Parent = infoContainer
 local fbC = Instance.new("UICorner"); fbC.CornerRadius = UDim.new(0, 6); fbC.Parent = fbLabel
 
 local versionLabel = Instance.new("TextLabel")
-versionLabel.Size = UDim2.new(0.9, 0, 0, 35)
-versionLabel.Position = UDim2.new(0.05, 0, 0.66, 0)
-versionLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52)
-versionLabel.Text = "  Phiên Bản: Mote Hub Beta 1.0"
-versionLabel.Font = Enum.Font.SourceSansBold
-versionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-versionLabel.TextSize = 12
-versionLabel.TextXAlignment = Enum.TextXAlignment.Left
-versionLabel.Parent = infoContainer
+versionLabel.Size = UDim2.new(0.9, 0, 0, 35); versionLabel.Position = UDim2.new(0.05, 0, 0.66, 0); versionLabel.BackgroundColor3 = Color3.fromRGB(36, 40, 52); versionLabel.Text = "  Phiên Bản: Mote Hub Beta 1.0"; versionLabel.Font = Enum.Font.SourceSansBold; versionLabel.TextColor3 = Color3.fromRGB(255, 255, 255); versionLabel.TextSize = 12; versionLabel.TextXAlignment = Enum.TextXAlignment.Left; versionLabel.Parent = infoContainer
 local vC = Instance.new("UICorner"); vC.CornerRadius = UDim.new(0, 6); vC.Parent = versionLabel
 
 local function switchTab(activeBtn, activePage)
@@ -733,7 +682,7 @@ end)
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 1.0",
-        Text = "Đã cập nhật cấu hình độ sáng theo yêu cầu!",
+        Text = "Đã gộp Mở cửa/Loot đồ + Smart Scanning (0.3s delay) thành công!",
         Duration = 5
     })
 end)
