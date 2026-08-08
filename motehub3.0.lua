@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 1.8 - FIX ESP PLAYER (BODY TRACER & HIGHLIGHT)
+-- MOTE HUB BETA 1.9 - SPEED x4, ANTI-RUBBERBAND & UI ANIMATIONS
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -33,7 +33,7 @@ local Flags = {
     NoClip = false,
     DoorsJump = false,
     SpeedHack = false,
-    SpeedMultiplier = 1.0,
+    SpeedMultiplier = 1.0, -- Giới hạn tối đa x4
     ThirdPerson = false,
     FlyCarpet = false,
     
@@ -62,12 +62,40 @@ local Themes = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoLoot = "4. Auto Mở Cửa Key & Loot", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 1.8" },
-    ENG = { Main = "Main", ESP = "ESP", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify", Fullbright = "3. Fullbright", AutoLoot = "4. Auto Key & Loot", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 1.8" }
+    VIE = { Main = "Main", ESP = "ESP", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoLoot = "4. Auto Mở Cửa Key & Loot", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Tối đa x4)", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 1.9" },
+    ENG = { Main = "Main", ESP = "ESP", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify", Fullbright = "3. Fullbright", AutoLoot = "4. Auto Key & Loot", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 1.9" }
 }
 
 --------------------------------------------------
--- 1. TÍNH NĂNG BAY SÁNG TẠO (MINECRAFT FLY MODE)
+-- 1. SPEED HACK CHỐNG GIẬT VỀ (SMOOTH CFRAME STEPPING)
+--------------------------------------------------
+RunService.RenderStepped:Connect(function(dt)
+    if LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        
+        -- Speed Hack bằng CFrame Delta giúp di chuyển cực mượt và chống Anti-Cheat giật về
+        if Flags.SpeedHack and hrp and humanoid and humanoid.Health > 0 then
+            if humanoid.MoveDirection.Magnitude > 0 then
+                local extraSpeedMultiplier = Flags.SpeedMultiplier - 1
+                if extraSpeedMultiplier > 0 then
+                    local moveDelta = humanoid.MoveDirection * (16 * extraSpeedMultiplier) * dt
+                    hrp.CFrame = hrp.CFrame + moveDelta
+                end
+            end
+        end
+
+        -- NoClip
+        if Flags.NoClip then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
+            end
+        end
+    end
+end)
+
+--------------------------------------------------
+-- 2. TÍNH NĂNG BAY SÁNG TẠO (MINECRAFT FLY MODE)
 --------------------------------------------------
 local flyBodyVel = nil
 local flyBodyGyro = nil
@@ -95,7 +123,7 @@ RunService.RenderStepped:Connect(function()
             flyBodyGyro.CFrame = Camera.CFrame
             
             local moveDir = humanoid.MoveDirection
-            local speed = (Flags.SpeedHack and (16 * Flags.SpeedMultiplier) or 20)
+            local speed = 20 * Flags.SpeedMultiplier
             flyBodyVel.Velocity = (moveDir * speed) + Vector3.new(0, flyVerticalSpeed, 0)
         end
     else
@@ -110,7 +138,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 2. TÍNH NĂNG GÓC NHÌN THỨ 3
+-- 3. GÓC NHÌN THỨ 3
 --------------------------------------------------
 local savedMinZoom = LocalPlayer.CameraMinZoomDistance
 local savedMaxZoom = LocalPlayer.CameraMaxZoomDistance
@@ -127,7 +155,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 3. HỆ THỐNG ESP PLAYER CHUẨN XÁC (MÀU CAM + HIGHLIGHT SKIN + DÂY TỪ NGƯỜI DÙNG)
+-- 4. ESP PLAYER MÀU CAM + HIGHLIGHT SKIN + DÂY
 --------------------------------------------------
 local PlayerESPContainer = {}
 local ORANGE_COLOR = Color3.fromRGB(255, 130, 0)
@@ -135,7 +163,6 @@ local ORANGE_COLOR = Color3.fromRGB(255, 130, 0)
 local function createPlayerESP(plr)
     if plr == LocalPlayer then return end
     
-    -- Highlight để hiện nguyên hình dáng / skin của người chơi
     local highlight = Instance.new("Highlight")
     highlight.Name = "Mote_PlayerHighlight"
     highlight.FillColor = ORANGE_COLOR
@@ -145,13 +172,11 @@ local function createPlayerESP(plr)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Enabled = false
 
-    -- Sợi dây Tracer xuất phát từ người dùng
     local line = Drawing.new("Line")
     line.Visible = false
     line.Color = ORANGE_COLOR
     line.Thickness = 1.5
 
-    -- Text hiển thị Tên và Khoảng cách màu Cam
     local text = Drawing.new("Text")
     text.Visible = false
     text.Color = ORANGE_COLOR
@@ -184,20 +209,16 @@ RunService.RenderStepped:Connect(function()
             local targetHRP = plr.Character.HumanoidRootPart
             local head = plr.Character:FindFirstChild("Head") or targetHRP
             
-            -- Tọa độ vị trí của BẠN (Người dùng Script) chiếu ra màn hình
             local myPosOnScreen, myOnScreen = Camera:WorldToViewportPoint(myHRP.Position)
-            -- Tọa độ vị trí của ĐỐI PHƯƠNG chiếu ra màn hình
             local targetPosOnScreen, targetOnScreen = Camera:WorldToViewportPoint(targetHRP.Position)
             local headPosOnScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
             
-            -- Gắn Highlight vào nhân vật đối phương để hiện Skin
             if esp.Highlight.Parent ~= plr.Character then
                 esp.Highlight.Parent = plr.Character
             end
             esp.Highlight.Enabled = true
 
             if targetOnScreen then
-                -- Dây xuất phát ĐÚNG từ vị trí nhân vật người dùng script nối đến giữa người đối phương
                 if myOnScreen then
                     esp.Line.From = Vector2.new(myPosOnScreen.X, myPosOnScreen.Y)
                 else
@@ -207,7 +228,6 @@ RunService.RenderStepped:Connect(function()
                 esp.Line.To = Vector2.new(targetPosOnScreen.X, targetPosOnScreen.Y)
                 esp.Line.Visible = true
                 
-                -- Tên & Khoảng cách hiển thị phía trên đầu màu cam
                 local dist = math.floor((myHRP.Position - targetHRP.Position).Magnitude)
                 esp.Text.Text = string.format("%s\n[%d studs]", plr.DisplayName, dist)
                 esp.Text.Position = Vector2.new(headPosOnScreen.X, headPosOnScreen.Y - 20)
@@ -225,7 +245,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- 4. LOGIC AUTO LOOT & CỬA
+-- 5. LOGIC AUTO LOOT & CỬA
 --------------------------------------------------
 local function isPromptValid(prompt)
     if not prompt or not prompt.Parent or not prompt.Enabled then return false end
@@ -292,26 +312,8 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- SPEED HACK, NOCLIP & FULLBRIGHT
+-- ANTI-AFK & FULLBRIGHT
 --------------------------------------------------
-RunService.Stepped:Connect(function()
-    if LocalPlayer.Character then
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            if Flags.SpeedHack then
-                humanoid.WalkSpeed = 16 * Flags.SpeedMultiplier
-            elseif humanoid.WalkSpeed ~= 16 then
-                humanoid.WalkSpeed = 16
-            end
-        end
-        if Flags.NoClip then
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
-            end
-        end
-    end
-end)
-
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
         if Flags.AntiAFK then
@@ -414,10 +416,10 @@ for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- THIẾT KẾ GIAO DIỆN NGANG (HORIZONTAL UI)
+-- GIAO DIỆN VÀ HIỆU ỨNG CHUYỂN ĐỘNG (ANIMATIONS)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta18"
+screenGui.Name = "MoteHub_Beta19"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -448,13 +450,21 @@ local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1,
 local btnStroke = Instance.new("UIStroke"); btnStroke.Color = Themes.YellowBlack.Accent; btnStroke.Thickness = 2; btnStroke.Parent = circleBtn
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 520, 0, 280); mainFrame.Position = UDim2.new(0.25, 0, 0.3, 0); mainFrame.BackgroundColor3 = Themes.YellowBlack.FrameBg; mainFrame.BorderSizePixel = 0; mainFrame.Visible = false; mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 520, 0, 280)
+mainFrame.Position = UDim2.new(0.25, 0, 0.3, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Themes.YellowBlack.FrameBg
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
 makeDraggable(mainFrame)
+
 local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.new(0, 10); frameCorner.Parent = mainFrame
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 1.8"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 1.9"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -508,6 +518,9 @@ for i, name in ipairs(tabNames) do
     end)
 end
 
+--------------------------------------------------
+-- TẠO TOGGLE VỚI HIỆU ỨNG TWEENING NÚT
+--------------------------------------------------
 local function createToggleSwitch(parent, labelText, flagName, posY, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(0.96, 0, 0, 32); container.Position = UDim2.new(0.02, 0, 0, posY); container.BackgroundTransparency = 1; container.Parent = parent
@@ -536,7 +549,12 @@ local function createToggleSwitch(parent, labelText, flagName, posY, callback)
         local targetStroke = isON and tTheme.Accent or Color3.fromRGB(80, 80, 80)
 
         if animated then
-            TweenService:Create(toggleDot, TweenInfo.new(0.2), {Position = targetPos, BackgroundColor3 = targetColor}):Play()
+            -- Hiệu ứng nảy nút (Bounce Effect)
+            TweenService:Create(toggleBg, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 48, 0, 24)}):Play()
+            task.delay(0.1, function()
+                TweenService:Create(toggleBg, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 44, 0, 22)}):Play()
+            end)
+            TweenService:Create(toggleDot, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = targetPos, BackgroundColor3 = targetColor}):Play()
             TweenService:Create(toggleStroke, TweenInfo.new(0.2), {Color = targetStroke}):Play()
         else
             toggleDot.Position = targetPos; toggleDot.BackgroundColor3 = targetColor; toggleStroke.Color = targetStroke
@@ -573,7 +591,7 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
     local function updateValue(input)
         local posX = math.clamp((input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X, 0, 1)
         sliderFill.Size = UDim2.new(posX, 0, 1, 0)
-        local val = math.floor(minVal + (maxVal - minVal) * posX * 10) / 10
+        local val = math.floor((minVal + (maxVal - minVal) * posX) * 10) / 10
         textLbl.Text = labelText .. ": " .. tostring(val)
         if callback then callback(val) end
     end
@@ -592,7 +610,7 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
 end
 
 --------------------------------------------------
--- NÚT NHẢY & CỤM ĐIỀU KHIỂN NÂNG HẠ ĐỘ CAO BAY
+-- NÚT NHẢY & BAY CONTROL
 --------------------------------------------------
 local jumpButtonUI = Instance.new("TextButton")
 jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
@@ -630,7 +648,7 @@ btnDown.MouseButton1Down:Connect(function() flyVerticalSpeed = -25 end)
 btnDown.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
 
 --------------------------------------------------
--- ĐỔ NỘI DUNG CÁC TAB
+-- ĐỔ NỘI DUNG CÁC TAB (SPEED UP TO x4)
 --------------------------------------------------
 -- TAB 1: MAIN
 createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
@@ -645,11 +663,11 @@ createToggleSwitch(pages[2], "ESP Vật Phẩm (Items)", "ESPItems", 40)
 createToggleSwitch(pages[2], "ESP Quái Vật (Monster)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "ESP Người Chơi (Highlight Cam/Dây)", "ESPPlayer", 110)
 
--- TAB 3: THỬ NGHIỆM
+-- TAB 3: THỬ NGHIỆM (SPEED HACK TỐI ĐA x4)
 createToggleSwitch(pages[3], Translations[Flags.Language].NoClip, "NoClip", 5)
 createToggleSwitch(pages[3], Translations[Flags.Language].Jump, "DoorsJump", 40, function(st) jumpButtonUI.Visible = st end)
 createToggleSwitch(pages[3], Translations[Flags.Language].Speed, "SpeedHack", 75)
-createSlider(pages[3], "  └ Tốc Độ", 1.0, 3.0, Flags.SpeedMultiplier, 110, function(val) Flags.SpeedMultiplier = val end)
+createSlider(pages[3], "  └ Tốc Độ (1.0x - 4.0x)", 1.0, 4.0, Flags.SpeedMultiplier, 110, function(val) Flags.SpeedMultiplier = val end)
 createToggleSwitch(pages[3], Translations[Flags.Language].ThirdPerson, "ThirdPerson", 155)
 createToggleSwitch(pages[3], Translations[Flags.Language].FlyCarpet, "FlyCarpet", 190, function(st) flyControlFrame.Visible = st end)
 
@@ -696,14 +714,44 @@ btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLangu
 
 createSlider(pages[5], Translations[Flags.Language].FontSizeTitle, 10, 18, Flags.TextSize, 120, function(val) Flags.TextSize = val end)
 
-circleBtn.MouseButton1Click:Connect(function() mainFrame.Visible = not mainFrame.Visible end)
+--------------------------------------------------
+-- HIỆU ỨNG TWEENING MỞ / TẮT MENU CHÍNH
+--------------------------------------------------
+local isMenuAnimating = false
+circleBtn.MouseButton1Click:Connect(function()
+    if isMenuAnimating then return end
+    isMenuAnimating = true
+
+    if mainFrame.Visible then
+        -- Animation Tắt Menu (Thu nhỏ biến mất)
+        local tweenClose = TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 0, 0, 0)
+        })
+        tweenClose:Play()
+        tweenClose.Completed:Connect(function()
+            mainFrame.Visible = false
+            isMenuAnimating = false
+        end)
+    else
+        -- Animation Mở Menu (Phóng to bung ra)
+        mainFrame.Size = UDim2.new(0, 0, 0, 0)
+        mainFrame.Visible = true
+        local tweenOpen = TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 520, 0, 280)
+        })
+        tweenOpen:Play()
+        tweenOpen.Completed:Connect(function()
+            isMenuAnimating = false
+        end)
+    end
+end)
 
 applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 1.8",
-        Text = "Cập nhật ESP Player màu Cam, Highlight Skin & Dây từ nhân vật!",
+        Title = "MOTE HUB BETA 1.9",
+        Text = "Đã cập nhật Speed x4 Anti-Lag & Hiệu ứng UI Smooth Animation!",
         Duration = 5
     })
 end)
