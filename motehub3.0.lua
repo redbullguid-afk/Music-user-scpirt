@@ -16,18 +16,18 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 local Flags = {
-    AntiAFK = true,
+    AntiAFK = false,
     SpeedHack = false,
-    SmartFullbright = true,
-    ESPDoor = true,
-    ESPItems = true,
-    ESPMonster = true,
+    SmartFullbright = false,
+    ESPDoor = false,
+    ESPItems = false,
+    ESPMonster = false,
     ESPPlayer = false,
     DoorsJump = false,
-    AutoLootAndDoor = true,
-    AutoMinigame = true,
+    AutoLootAndDoor = false, 
+    AutoMinigame = false,
     FlyCarpet = false,
-    MonsterNotify = true
+    MonsterNotify = false,
 }
 
 local SpeedMultiplier = 1.3
