@@ -129,10 +129,10 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC FIX 3: AUTO MỞ TỦ AN TOÀN & AUTO LOOT
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT (ĐÃ CHỈNH 0.9S & 3 STUDS)
 --------------------------------------------------
 local isOpeningDrawer = false
-local DRAWER_COOLDOWN = 0.35 -- Thời gian chờ an toàn để tránh hỏng/kẹt hộc tủ
+local DRAWER_COOLDOWN = 0.9 -- Đã chỉnh lên 0.9 giây
 
 task.spawn(function()
     while task.wait(0.1) do
@@ -141,7 +141,7 @@ task.spawn(function()
             if hrp then
                 local playerPos = hrp.Position
                 
-                -- Quét toàn bộ ProximityPrompt trong phạm vi gần (12 studs)
+                -- Quét toàn bộ ProximityPrompt trong phạm vi gần (3 studs)
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local parent = prompt.Parent
@@ -149,11 +149,11 @@ task.spawn(function()
                             local targetPart = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
                             if targetPart then
                                 local dist = (targetPart.Position - playerPos).Magnitude
-                                if dist <= 12 then
+                                if dist <= 3 then -- Đã chỉnh xuống 3 studs
                                     local nameLower = parent.Name:lower()
                                     local pNameLower = (parent.Parent and parent.Parent.Name:lower()) or ""
                                     
-                                    -- 1. Auto Loot Tiền & Vật phẩm (Thực hiện tức thì)
+                                    -- 1. Auto Loot Tiền & Vật phẩm
                                     local isLootItem = nameLower:find("gold") or nameLower:find("coin") or nameLower:find("item") 
                                         or ImportantItems[parent.Name] or ImportantItems[parent.Parent and parent.Parent.Name or ""]
                                         or prompt.ActionText:lower():find("take") or prompt.ActionText:lower():find("loot")
@@ -161,7 +161,7 @@ task.spawn(function()
 
                                     if isLootItem then
                                         safeInteract(prompt)
-                                    -- 2. Auto Mở Tủ có khoảng nghỉ (Tránh spam văng/hỏng kệ tủ)
+                                    -- 2. Auto Mở Tủ với Cooldown 0.9s
                                     elseif (nameLower:find("drawer") or pNameLower:find("drawer") or nameLower:find("knob") or nameLower:find("closet")) then
                                         if not isOpeningDrawer then
                                             isOpeningDrawer = true
@@ -181,7 +181,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC AUTO MỞ CỬA BẰNG KEY (FIX XUNG ĐỘT)
+-- LOGIC AUTO MỞ CỬA BẰNG KEY
 --------------------------------------------------
 task.spawn(function()
     while task.wait(0.15) do
@@ -199,7 +199,7 @@ task.spawn(function()
                             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
                             if doorPart then
                                 local dist = (doorPart.Position - hrp.Position).Magnitude
-                                if dist <= 12 then
+                                if dist <= 8 then
                                     local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
                                     if prompt and prompt.Enabled then
                                         safeInteract(prompt)
@@ -325,7 +325,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- LOGIC FIX 1: ESP NGƯỜI CHƠI & DÂY NỐI CHUẨN XÁC
+-- ESP NGƯỜI CHƠI & DÂY NỐI CHUẨN XÁC
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -383,7 +383,6 @@ local function setupFullPlayerESP(plr)
                     label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
                 end
 
-                -- Chuyển tọa độ 3D HumanoidRootPart của đối phương sang 2D Viewport
                 local targetPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 
                 if onScreen then
@@ -396,7 +395,6 @@ local function setupFullPlayerESP(plr)
                     box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    -- Dây nối chuẩn từ điểm giữa đáy màn hình kết nối trực tiếp đến Player
                     line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                     line.To = Vector2.new(targetPos.X, targetPos.Y)
                     line.Visible = true
@@ -457,24 +455,20 @@ local function processObject(obj)
         if not obj then return end
         local nameLower = obj.Name:lower()
 
-        -- Bỏ qua trang trí, khung ảnh, kính, decal
         if nameLower:find("painting") or nameLower:find("frame") or nameLower:find("eyes_seek") or nameLower:find("seek_eyes") or nameLower:find("prop") or nameLower:find("decal") then
             return
         end
 
-        -- ESP Cửa
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
             if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
         end
 
-        -- ESP Cần Gạt / Breaker Box
         if (nameLower:find("lever") or nameLower:find("breaker") or nameLower:find("switch") or nameLower:find("electric")) and not obj:FindFirstChild("Mote_ESP_ESPLever", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever") end
         end
 
-        -- ESP RƯƠNG ĐỒ CHUẨN XÁC (Loại bỏ Cửa Sổ, Kính, Tường)
         local isWindow = nameLower:find("window") or nameLower:find("glass") or nameLower:find("pane") or nameLower:find("frame") or nameLower:find("wall")
         local isChest = (nameLower:find("chest") or nameLower == "box" or nameLower == "lootbox") and not isWindow and not nameLower:find("hitbox") and not nameLower:find("light") and not nameLower:find("drawer") and not nameLower:find("cabinet")
         
@@ -486,7 +480,6 @@ local function processObject(obj)
             end
         end
 
-        -- ESP Quái
         local detectedMonsterName = nil
         if nameLower:find("rushmoving") or nameLower == "rush" then detectedMonsterName = "Rush"
         elseif nameLower:find("ambushmoving") or nameLower == "ambush" then detectedMonsterName = "Ambush"
@@ -511,7 +504,6 @@ local function processObject(obj)
             triggerSmartMonsterNotice(obj, detectedMonsterName)
         end
 
-        -- ESP Items
         if ImportantItems[obj.Name] and not obj:FindFirstChild("Mote_ESP_ESPItems", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, ImportantItems[obj.Name], ESPColors.Items, "ESPItems") end
@@ -799,8 +791,8 @@ createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
 createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Sách, Cầu Chì, Items)", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Seek real)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
-createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest - Lọc Cửa Sổ chuẩn)", "ESPChest", 145)
-createToggleSwitch(pages[2], "🟠 ESP Người Chơi (Fix Dây Nối từ người chơi)", "ESPPlayer", 180)
+createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
+createToggleSwitch(pages[2], "🟠 ESP Người Chơi", "ESPPlayer", 180)
 
 -- TAB 3: AUTOMATION
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDrawers, "AutoDrawersLoot", 5)
@@ -880,7 +872,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.8",
-        Text = "Đã sửa hoàn toàn ESP dây nối & Tự động mở tủ an toàn không bị hỏng hóc!",
+        Text = "Đã cập nhật Auto Loot: Cooldown 0.9s & Phạm vi 3 studs!",
         Duration = 5
     })
 end)
