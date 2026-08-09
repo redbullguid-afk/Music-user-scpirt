@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.8 - ADJUSTED LOOT SPEED (0.6s)
+-- MOTE HUB BETA 2.91 - TRACER FROM LOCAL CHARACTER
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -38,7 +38,7 @@ local Flags = {
     DoorsJump = false,
     SpeedHack = false,
     SpeedMultiplier = 1.0,
-    ThirdPerson = false,
+    FreecamSoul = false,
     FlyCarpet = false,
     
     Language = "VIE",
@@ -61,7 +61,7 @@ local OriginalLighting = {
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     RedBlack    = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
-    GreenBlack  = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
+    GreenBlack  = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     PinkBlack   = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
 }
 
@@ -75,8 +75,8 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ & Auto Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.8" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.8" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.91" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.91" }
 }
 
 --------------------------------------------------
@@ -129,11 +129,12 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ & AUTO LOOT (ĐÃ CHỈNH 0.6S COOLDOWN)
+-- LOGIC AUTO MỞ TỦ (TỐI ĐA 3 TỦ) & AUTO LOOT
 --------------------------------------------------
-local isOpeningDrawer = false
-local DRAWER_COOLDOWN = 0.6 -- Thời gian chờ giữa các lần lút đồ: 0.6 giây
-local MAX_LOOT_DIST = 5     -- Khoảng cách tương tác: 5 studs
+local activeDrawersCount = 0
+local MAX_SIMULTANEOUS_DRAWERS = 3
+local DRAWER_COOLDOWN = 0.6
+local MAX_LOOT_DIST = 5
 
 task.spawn(function()
     while task.wait(0.05) do
@@ -153,7 +154,6 @@ task.spawn(function()
                                     local nameLower = parent.Name:lower()
                                     local pNameLower = (parent.Parent and parent.Parent.Name:lower()) or ""
                                     
-                                    -- 1. Auto Loot Vật Phẩm / Tiền
                                     local isLootItem = nameLower:find("gold") or nameLower:find("coin") or nameLower:find("item") 
                                         or ImportantItems[parent.Name] or ImportantItems[parent.Parent and parent.Parent.Name or ""]
                                         or prompt.ActionText:lower():find("take") or prompt.ActionText:lower():find("loot")
@@ -161,13 +161,14 @@ task.spawn(function()
 
                                     if isLootItem then
                                         safeInteract(prompt)
-                                    -- 2. Auto Mở Tủ Giữa Thời Gian Chờ 0.6s
                                     elseif (nameLower:find("drawer") or pNameLower:find("drawer") or nameLower:find("knob") or nameLower:find("closet")) then
-                                        if not isOpeningDrawer then
-                                            isOpeningDrawer = true
-                                            safeInteract(prompt)
-                                            task.wait(DRAWER_COOLDOWN)
-                                            isOpeningDrawer = false
+                                        if activeDrawersCount < MAX_SIMULTANEOUS_DRAWERS then
+                                            activeDrawersCount = activeDrawersCount + 1
+                                            task.spawn(function()
+                                                safeInteract(prompt)
+                                                task.wait(DRAWER_COOLDOWN)
+                                                activeDrawersCount = math.max(0, activeDrawersCount - 1)
+                                            end)
                                         end
                                     end
                                 end
@@ -215,7 +216,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG TỐC ĐỘ, NOCLIP, BAY & CAM
+-- TÍNH NĂNG TỐC ĐỘ, NOCLIP & BAY SÁNG TẠO
 --------------------------------------------------
 RunService.RenderStepped:Connect(function(dt)
     if LocalPlayer.Character then
@@ -244,7 +245,7 @@ local flyBodyVel, flyBodyGyro = nil, nil
 local flyVerticalSpeed = 0
 
 RunService.RenderStepped:Connect(function()
-    if Flags.FlyCarpet and LocalPlayer.Character then
+    if Flags.FlyCarpet and LocalPlayer.Character and not Flags.FreecamSoul then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         
@@ -263,27 +264,75 @@ RunService.RenderStepped:Connect(function()
             flyBodyVel.Velocity = (moveDir * speed) + Vector3.new(0, flyVerticalSpeed, 0)
         end
     else
-        if LocalPlayer.Character then
+        if LocalPlayer.Character and not Flags.FreecamSoul then
             local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if humanoid then humanoid.PlatformStand = false end
         end
         if flyBodyVel then flyBodyVel:Destroy(); flyBodyVel = nil end
         if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
-        flyVerticalSpeed = 0
+        if not Flags.FreecamSoul then flyVerticalSpeed = 0 end
     end
 end)
 
-local savedMinZoom = LocalPlayer.CameraMinZoomDistance
-local savedMaxZoom = LocalPlayer.CameraMaxZoomDistance
+--------------------------------------------------
+-- CHẾ ĐỘ KHẢM GIẢ / LINH HỒN TÁCH XÁC (FREECAM SOUL)
+--------------------------------------------------
+local freecamPart = nil
+local isFreecamActive = false
 
-RunService.RenderStepped:Connect(function()
-    if Flags.ThirdPerson and LocalPlayer.Character then
-        LocalPlayer.CameraMode = Enum.CameraMode.Classic
-        LocalPlayer.CameraMinZoomDistance = 8
-        LocalPlayer.CameraMaxZoomDistance = 15
+local function setFreecamState(state)
+    Flags.FreecamSoul = state
+    if state then
+        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        
+        if humanoid then humanoid.PlatformStand = true end
+        hrp.Anchored = true
+
+        freecamPart = Instance.new("Part")
+        freecamPart.Name = "Mote_Freecam_Soul"
+        freecamPart.Size = Vector3.new(1, 1, 1)
+        freecamPart.Transparency = 1
+        freecamPart.CanCollide = false
+        freecamPart.Anchored = true
+        freecamPart.CFrame = Camera.CFrame
+        freecamPart.Parent = Workspace
+
+        Camera.CameraSubject = freecamPart
+        Camera.CameraType = Enum.CameraType.Scriptable
+        isFreecamActive = true
     else
-        LocalPlayer.CameraMinZoomDistance = savedMinZoom
-        LocalPlayer.CameraMaxZoomDistance = savedMaxZoom
+        isFreecamActive = false
+        if LocalPlayer.Character then
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hrp then hrp.Anchored = false end
+            if humanoid then 
+                humanoid.PlatformStand = false 
+                Camera.CameraSubject = humanoid
+            end
+        end
+        Camera.CameraType = Enum.CameraType.Custom
+        if freecamPart then freecamPart:Destroy(); freecamPart = nil end
+    end
+end
+
+RunService.RenderStepped:Connect(function(dt)
+    if isFreecamActive and freecamPart and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local moveDir = humanoid and humanoid.MoveDirection or Vector3.new(0, 0, 0)
+        local speed = 25 * Flags.SpeedMultiplier
+        
+        local lookVector = Camera.CFrame.LookVector
+        local rightVector = Camera.CFrame.RightVector
+        
+        local moveVector = (rightVector * moveDir.X) + (lookVector * -moveDir.Z)
+        local verticalVector = Vector3.new(0, flyVerticalSpeed, 0) * dt
+        
+        local newPos = freecamPart.Position + (moveVector * speed * dt) + verticalVector
+        freecamPart.CFrame = CFrame.new(newPos, newPos + Camera.CFrame.LookVector)
+        Camera.CFrame = freecamPart.CFrame
     end
 end)
 
@@ -325,7 +374,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI & DÂY NỐI CHUẨN XÁC
+-- ESP NGƯỜI CHƠI & DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT NGƯỜI DÙNG
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -378,8 +427,12 @@ local function setupFullPlayerESP(plr)
 
             if Flags.ESPPlayer then
                 hl.Enabled = true; bb.Enabled = true
-                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
+                
+                local localChar = LocalPlayer.Character
+                local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
+
+                if localHrp then
+                    local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
                     label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
                 end
 
@@ -395,9 +448,26 @@ local function setupFullPlayerESP(plr)
                     box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                    line.To = Vector2.new(targetPos.X, targetPos.Y)
-                    line.Visible = true
+                    -- BẮT ĐẦU DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT NGƯỜI DÙNG SÀI SCRIPT
+                    local startScreenPos = nil
+                    if isFreecamActive and freecamPart then
+                        local startPos3D, startOnScreen = Camera:WorldToViewportPoint(freecamPart.Position)
+                        if startOnScreen then startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y) end
+                    elseif localHrp then
+                        local myBodyPos3D = localHrp.Position
+                        local startPos3D, startOnScreen = Camera:WorldToViewportPoint(myBodyPos3D)
+                        if startOnScreen then
+                            startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y)
+                        end
+                    end
+
+                    if startScreenPos then
+                        line.From = startScreenPos
+                        line.To = Vector2.new(targetPos.X, targetPos.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
                 else
                     box.Visible = false; line.Visible = false
                 end
@@ -415,7 +485,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- HỆ THỐNG CẢNH BÁO QUÁI VẬT (CHUẨN XÁC KHI NÓ XUẤT HIỆN)
+-- HỆ THỐNG CẢNH BÁO QUÁI VẬT
 --------------------------------------------------
 local notifiedMonsters = {}
 local lastNoticeTimes = {}
@@ -456,7 +526,6 @@ local function processObject(obj)
         local nameLower = obj.Name:lower()
         local parentNameLower = (obj.Parent and obj.Parent.Name:lower()) or ""
 
-        -- Lọc các Part trang trí, decal, mắt Seek giả trong phòng
         if nameLower:find("painting") or nameLower:find("frame") or nameLower:find("eyes_seek") or nameLower:find("seek_eyes") 
             or nameLower:find("prop") or nameLower:find("decal") or parentNameLower:find("asset") or parentNameLower:find("room") then
             if not (nameLower:find("moving") or nameLower:find("rig") or obj:IsA("Model")) then
@@ -464,19 +533,16 @@ local function processObject(obj)
             end
         end
 
-        -- 1. ESP CỬA
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
             if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
         end
 
-        -- 2. ESP CẦN GẠT
         if (nameLower:find("lever") or nameLower:find("breaker") or nameLower:find("switch") or nameLower:find("electric")) and not obj:FindFirstChild("Mote_ESP_ESPLever", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever") end
         end
 
-        -- 3. ESP RƯƠNG
         local isWindow = nameLower:find("window") or nameLower:find("glass") or nameLower:find("pane") or nameLower:find("frame") or nameLower:find("wall")
         local isChest = (nameLower:find("chest") or nameLower == "box" or nameLower == "lootbox") and not isWindow and not nameLower:find("hitbox") and not nameLower:find("light") and not nameLower:find("drawer") and not nameLower:find("cabinet")
         
@@ -488,9 +554,7 @@ local function processObject(obj)
             end
         end
 
-        -- 4. BỘ LỌC CẢNH BÁO QUÁI VẬT
         local detectedMonsterName = nil
-        
         if nameLower:find("rushmoving") or nameLower == "rush" then 
             detectedMonsterName = "Rush"
         elseif nameLower:find("ambushmoving") or nameLower == "ambush" then 
@@ -527,7 +591,6 @@ local function processObject(obj)
             triggerSmartMonsterNotice(obj, detectedMonsterName)
         end
 
-        -- 5. ESP VẬT PHẨM
         if ImportantItems[obj.Name] and not obj:FindFirstChild("Mote_ESP_ESPItems", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, ImportantItems[obj.Name], ESPColors.Items, "ESPItems") end
@@ -575,10 +638,10 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN GUI MOTE HUB (BETA 2.8)
+-- GIAO DIỆN GUI MOTE HUB (BETA 2.91)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta28"
+screenGui.Name = "MoteHub_Beta291"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -616,7 +679,7 @@ local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.ne
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.8"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.91"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -764,7 +827,7 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
 end
 
 --------------------------------------------------
--- CONTROL BUTTONS
+-- NÚT NHẢY VÀ NÚT BAY
 --------------------------------------------------
 local jumpButtonUI = Instance.new("TextButton")
 jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
@@ -801,6 +864,10 @@ btnUp.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
 btnDown.MouseButton1Down:Connect(function() flyVerticalSpeed = -25 end)
 btnDown.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
 
+local function updateFlyControlVisibility()
+    flyControlFrame.Visible = Flags.FlyCarpet or Flags.FreecamSoul
+end
+
 --------------------------------------------------
 -- NỘI DUNG TẤT CẢ TABS
 --------------------------------------------------
@@ -827,8 +894,13 @@ createToggleSwitch(pages[4], Translations[Flags.Language].NoClip, "NoClip", 5)
 createToggleSwitch(pages[4], Translations[Flags.Language].Jump, "DoorsJump", 40, function(st) jumpButtonUI.Visible = st end)
 createToggleSwitch(pages[4], Translations[Flags.Language].Speed, "SpeedHack", 75)
 createSlider(pages[4], "  └ Tốc Độ (1.0x - 4.0x)", 1.0, 4.0, Flags.SpeedMultiplier, 110, function(val) Flags.SpeedMultiplier = val end)
-createToggleSwitch(pages[4], Translations[Flags.Language].ThirdPerson, "ThirdPerson", 155)
-createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet", 190, function(st) flyControlFrame.Visible = st end)
+createToggleSwitch(pages[4], Translations[Flags.Language].Freecam, "FreecamSoul", 155, function(st)
+    setFreecamState(st)
+    updateFlyControlVisibility()
+end)
+createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet", 190, function(st)
+    updateFlyControlVisibility()
+end)
 
 -- TAB 5: SETTINGS & INFO
 local themeLbl = Instance.new("TextLabel")
@@ -863,7 +935,6 @@ createSlider(pages[5], Translations[Flags.Language].FontSizeTitle, 10, 18, Flags
     updateAllTextSizes()
 end)
 
--- THÔNG TIN TÁC GIẢ KHI CUỘN XUỐNG CÀI ĐẶT
 local authorLbl = Instance.new("TextLabel")
 authorLbl.Size = UDim2.new(0.96, 0, 0, 20); authorLbl.Position = UDim2.new(0.02, 0, 0, 170); authorLbl.BackgroundTransparency = 1; authorLbl.Text = Translations[Flags.Language].Author; authorLbl.Font = Enum.Font.SourceSansBold; authorLbl.TextColor3 = Color3.fromRGB(255, 215, 0); authorLbl.TextXAlignment = Enum.TextXAlignment.Left; authorLbl.Parent = pages[5]
 registerTextLabel(authorLbl)
@@ -912,8 +983,8 @@ applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 2.8",
-        Text = "Đã cập nhật Auto Loot 0.6s & Giữ nguyên toàn bộ tính năng!",
+        Title = "MOTE HUB BETA 2.91",
+        Text = "Đã nối Tracer ESP trực tiếp từ thân nhân vật của bạn!",
         Duration = 5
     })
 end)
