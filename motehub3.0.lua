@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.2 - DISTINCT COLOR ESP & ADVANCED PLAYER ESP
+-- MOTE HUB BETA 2.5 - FULL MONSTERS NOTIFY & SMART SEEK COOLDOWN
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -54,32 +54,31 @@ local OriginalLighting = {
 }
 
 --------------------------------------------------
--- PALETTE MÀU THEME MENU & MÀU ESP PHÂN BIỆT
+-- PALETTE MÀU THEME MENU & MÀU ESP
 --------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     RedBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     GreenBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
-    PinkBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
+    PinkBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
 }
 
--- Bảng màu phân biệt từng loại ESP
 local ESPColors = {
     Monster = Color3.fromRGB(255, 40, 40),    -- 🔴 Đỏ Rực (Quái vật)
     Door    = Color3.fromRGB(0, 255, 128),   -- 🟢 Xanh Lá (Cửa)
     Lever   = Color3.fromRGB(255, 255, 0),   -- 🟡 Vàng Chói (Cần gạt / Breaker)
     Chest   = Color3.fromRGB(200, 100, 255), -- 🟣 Tím (Rương đồ)
-    Items   = Color3.fromRGB(0, 255, 255),   -- 🔵 Cyan / Xanh Lam (Vật phẩm, Sách, Cầu trì)
+    Items   = Color3.fromRGB(0, 255, 255),   -- 🔵 Cyan (Sách, Cầu trì, Items)
     Player  = Color3.fromRGB(255, 140, 0)    -- 🟠 Cam Sáng (Người chơi)
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoLoot = "4. Auto Mở Cửa Key & Loot", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Tối đa x4)", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.2" },
-    ENG = { Main = "Main", ESP = "ESP", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify", Fullbright = "3. Fullbright", AutoLoot = "4. Auto Key & Loot", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.2" }
+    VIE = { Main = "Main", ESP = "ESP", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật Thông Minh", Fullbright = "3. Nhìn Trong Bóng Tối", AutoLoot = "4. Auto Mở Cửa Key & Loot", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Tối đa x4)", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.5" },
+    ENG = { Main = "Main", ESP = "ESP", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoLoot = "4. Auto Key & Loot", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.5" }
 }
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (CÓ SÁCH VÀ CẦU TRÌ)
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ DANH SÁCH QUÁI VẬT MỞ RỘNG
 --------------------------------------------------
 local ImportantItems = {
     ["KeyObtain"] = "🔑 Chìa Khóa", ["Key"] = "🔑 Chìa Khóa", ["MasterKey"] = "🔑 Chìa Khóa Master",
@@ -92,10 +91,22 @@ local ImportantItems = {
     ["Lighter"] = "🔥 Bật Lửa"
 }
 
-local MonstersList = {
-    ["RushMoving"] = "⚠️ Rush", ["AmbushMoving"] = "⚠️ Ambush", ["FigureRig"] = "👹 Figure",
-    ["Screech"] = "👾 Screech", ["Eyes"] = "👀 Eyes", ["Halt"] = "👻 Halt",
-    ["A60"] = "💀 A-60", ["A120"] = "💀 A-120", ["Hide"] = "🙈 Hide", ["Jack"] = "🎃 Jack"
+-- Bảng hướng dẫn hành động riêng cho TẤT CẢ các con quái
+local MonsterAdvice = {
+    ["Rush"] = "Trốn vô tủ mau!",
+    ["Ambush"] = "Trốn vô tủ mau!",
+    ["Seek"] = "Chuẩn bị chạy trốn Seek!",
+    ["Screech"] = "Xoay người nhìn nó ngay!",
+    ["Eyes"] = "Không nhìn vào nó!",
+    ["Halt"] = "Chú ý đổi hướng di chuyển!",
+    ["Figure"] = "Đi cúi người (Crouch), giữ khoảng cách!",
+    ["Hide"] = "Rời khỏi tủ ngay!",
+    ["Jack"] = "Chờ 1 chút rồi mở lại tủ!",
+    ["Dupe"] = "Cẩn thận cửa giả!",
+    ["Timothy"] = "Nhện giật mình trong hộc bàn!",
+    ["Dread"] = "Mở cửa tiến lên phía trước mau!",
+    ["A-60"] = "Trốn vô tủ / chỗ nấp ngay!",
+    ["A-120"] = "Trốn vô tủ ngay!"
 }
 
 --------------------------------------------------
@@ -190,8 +201,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- HỆ THỐNG ESP CHỮ ĐƠN GIẢN (CỬA, QUÁI, CẦN GẠT, RƯƠNG, VẬT PHẨM/SÁCH/CẦU TRÌ)
--- TỰ ĐỘNG XÓA KHI VẬT THỂ BỊ NHẶT VÀ MẤT KHỎI MAP
+-- ESP CHỮ ĐƠN GIẢN
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     local billboard = Instance.new("BillboardGui")
@@ -228,7 +238,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- HỆ THỐNG ESP NGƯỜI CHƠI NÂNG CAO (HIGHLIGHT, KHUNG BOX, DÂY NỐI, TÊN & KHOẢNG CÁCH)
+-- ESP NGƯỜI CHƠI (HIGHLIGHT, BOX, TRACER, NAME)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -239,7 +249,6 @@ local function setupFullPlayerESP(plr)
         local head = char:WaitForChild("Head", 5)
         if not hrp or not head then return end
 
-        -- 1. Highlight Tô Màu Cơ Thể
         local hl = char:FindFirstChild("Mote_Player_Highlight") or Instance.new("Highlight")
         hl.Name = "Mote_Player_Highlight"
         hl.FillColor = ESPColors.Player
@@ -249,7 +258,6 @@ local function setupFullPlayerESP(plr)
         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         hl.Parent = char
 
-        -- 2. Billboard Tên + Khoảng Cách
         local bb = head:FindFirstChild("Mote_Player_Billboard") or Instance.new("BillboardGui")
         bb.Name = "Mote_Player_Billboard"
         bb.Adornee = head
@@ -267,18 +275,11 @@ local function setupFullPlayerESP(plr)
         label.Parent = bb
         bb.Parent = head
 
-        -- 3. Khung Viền Box ESP
         local box = Drawing.new("Square")
-        box.Visible = false
-        box.Color = ESPColors.Player
-        box.Thickness = 1.5
-        box.Filled = false
+        box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
 
-        -- 4. Dây Nối Tracer Line
         local line = Drawing.new("Line")
-        line.Visible = false
-        line.Color = ESPColors.Player
-        line.Thickness = 1.5
+        line.Visible = false; line.Color = ESPColors.Player; line.Thickness = 1.5
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
@@ -289,9 +290,7 @@ local function setupFullPlayerESP(plr)
             end
 
             if Flags.ESPPlayer then
-                hl.Enabled = true
-                bb.Enabled = true
-
+                hl.Enabled = true; bb.Enabled = true
                 if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
                     label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
@@ -312,14 +311,10 @@ local function setupFullPlayerESP(plr)
                     line.To = Vector2.new(pos.X, pos.Y)
                     line.Visible = true
                 else
-                    box.Visible = false
-                    line.Visible = false
+                    box.Visible = false; line.Visible = false
                 end
             else
-                hl.Enabled = false
-                bb.Enabled = false
-                box.Visible = false
-                line.Visible = false
+                hl.Enabled = false; bb.Enabled = false; box.Visible = false; line.Visible = false
             end
         end)
     end
@@ -331,66 +326,117 @@ end
 for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
--- Hệ thống quét đối tượng
+--------------------------------------------------
+-- SMART MONSTER NOTIFIER (BÁO TẤT CẢ QUÁI + CHUẨN COOLDOWN SEEK 3 PHÚT)
+--------------------------------------------------
 local notifiedMonsters = {}
+local lastSeekNoticeTime = 0 -- Đếm thời gian cho Seek (giới hạn 3 phút)
+
+local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
+    if not Flags.MonsterNotify then return end
+    if notifiedMonsters[monsterObj] then return end
+
+    local nameLower = rawMonsterName:lower()
+
+    -- QUẢN LÝ COOLDOWN DÀNH RIÊNG CHO SEEK (TỐI ĐA 1 LẦN/3 PHÚT)
+    if nameLower:find("seek") then
+        local currentTime = tick()
+        if currentTime - lastSeekNoticeTime < 180 then
+            return -- Đang trong 3 phút chờ, không phát thông báo lặp lại
+        end
+        lastSeekNoticeTime = currentTime
+    end
+
+    notifiedMonsters[monsterObj] = true
+
+    local actionText = MonsterAdvice[rawMonsterName] or "Cẩn thận quái vật này!"
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "🚨 CẢNH BÁO QUÁI VẬT!",
+            Text = rawMonsterName .. " đã xuất hiện! " .. actionText,
+            Duration = 5
+        })
+    end)
+
+    -- Theo dõi khi quái vật bị xóa khỏi Workspace
+    monsterObj.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            notifiedMonsters[monsterObj] = nil
+            
+            -- ĐẶC BIỆT: Nhắc nhở riêng khi Ambush đã đi hẳn
+            if nameLower:find("ambush") and Flags.MonsterNotify then
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "✅ AN TOÀN!",
+                        Text = "Ambush đã đi rồi!",
+                        Duration = 4
+                    })
+                end)
+            end
+        end
+    end)
+end
 
 local function processObject(obj)
     pcall(function()
         if not obj then return end
         local nameLower = obj.Name:lower()
 
-        if nameLower:find("seek") then return end
+        -- ❌ BỎ QUA HOÀN TOÀN TẤT CẢ TRANH MẮT, VẬT TRANG TRÍ HOẶC SEEK_EYES
+        if nameLower:find("painting") or nameLower:find("frame") or nameLower:find("eyes_seek") or nameLower:find("seek_eyes") or nameLower:find("prop") or nameLower:find("decal") then
+            return
+        end
 
         -- 1. ESP Cửa
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
-            if doorPart then
-                createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor")
-            end
+            if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
         end
 
         -- 2. ESP Cần Gạt / Breaker / Switch
         if (nameLower:find("lever") or nameLower:find("breaker") or nameLower:find("switch") or nameLower:find("electric")) and not obj:FindFirstChild("Mote_ESP_ESPLever", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then
-                createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever")
-            end
+            if targetPart then createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever") end
         end
 
         -- 3. ESP Rương Đồ
         if (nameLower:find("chest") or nameLower:find("box")) and not nameLower:find("drawer") and not nameLower:find("cabinet") and not obj:FindFirstChild("Mote_ESP_ESPChest", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then
-                createBillboard(targetPart, "📦 Rương Đồ", ESPColors.Chest, "ESPChest")
-            end
+            if targetPart then createBillboard(targetPart, "📦 Rương Đồ", ESPColors.Chest, "ESPChest") end
         end
 
-        -- 4. ESP Quái Vật
-        local monsterDisplayName = MonstersList[obj.Name]
-        if not monsterDisplayName and not nameLower:find("seek") then
-            if nameLower:find("rush") or nameLower:find("ambush") or nameLower:find("figure") or nameLower:find("screech") then
-                monsterDisplayName = "⚠️ " .. obj.Name
-            end
+        -- 4. NHẬN DIỆN VÀ CẢNH BÁO TẤT CẢ CÁC LOẠI QUÁI VẬT
+        local detectedMonsterName = nil
+
+        if nameLower:find("rushmoving") or nameLower == "rush" then detectedMonsterName = "Rush"
+        elseif nameLower:find("ambushmoving") or nameLower == "ambush" then detectedMonsterName = "Ambush"
+        elseif nameLower:find("seekmoving") or (nameLower == "seek" and obj:IsA("Model")) then detectedMonsterName = "Seek"
+        elseif nameLower == "screech" then detectedMonsterName = "Screech"
+        elseif nameLower == "eyes" then detectedMonsterName = "Eyes"
+        elseif nameLower == "halt" then detectedMonsterName = "Halt"
+        elseif nameLower:find("figurerig") or nameLower == "figure" then detectedMonsterName = "Figure"
+        elseif nameLower == "hide" then detectedMonsterName = "Hide"
+        elseif nameLower == "jack" then detectedMonsterName = "Jack"
+        elseif nameLower:find("dupe") then detectedMonsterName = "Dupe"
+        elseif nameLower:find("timothy") or nameLower:find("spider") then detectedMonsterName = "Timothy"
+        elseif nameLower == "dread" then detectedMonsterName = "Dread"
+        elseif nameLower == "a60" or nameLower == "a-60" then detectedMonsterName = "A-60"
+        elseif nameLower == "a120" or nameLower == "a-120" then detectedMonsterName = "A-120"
         end
 
-        if monsterDisplayName and not obj:FindFirstChild("Mote_ESP_ESPMonster", true) then
+        if detectedMonsterName then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then
-                createBillboard(targetPart, monsterDisplayName, ESPColors.Monster, "ESPMonster")
+            if targetPart and not obj:FindFirstChild("Mote_ESP_ESPMonster", true) then
+                createBillboard(targetPart, "⚠️ " .. detectedMonsterName, ESPColors.Monster, "ESPMonster")
             end
-
-            if Flags.MonsterNotify and not notifiedMonsters[obj] then
-                notifiedMonsters[obj] = true
-                pcall(function() StarterGui:SetCore("SendNotification", { Title = "⚠️ CẢNH BẢO QUÁI VẬT!", Text = monsterDisplayName .. " Đang xuất hiện!", Duration = 4 }) end)
-            end
+            triggerSmartMonsterNotice(obj, detectedMonsterName)
         end
 
-        -- 5. ESP Vật Phẩm (Chứa Chìa Khóa, Đèn, Sách, Cầu Trì, v.v.)
+        -- 5. ESP Vật Phẩm (Chìa Khóa, Đèn, Sách, Cầu Trì)
         if ImportantItems[obj.Name] and not obj:FindFirstChild("Mote_ESP_ESPItems", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then
-                createBillboard(targetPart, ImportantItems[obj.Name], ESPColors.Items, "ESPItems")
-            end
+            if targetPart then createBillboard(targetPart, ImportantItems[obj.Name], ESPColors.Items, "ESPItems") end
         end
     end)
 end
@@ -414,9 +460,7 @@ local function scanAndClassifyObject(prompt)
     local parentName = parent.Name:lower()
 
     if parentName:find("lock") or parentName:find("door") then
-        if prompt.ActionText:lower():find("unlock") or prompt.ActionText:lower():find("mở") then
-            return "DOOR_LOCKED"
-        end
+        if prompt.ActionText:lower():find("unlock") or prompt.ActionText:lower():find("mở") then return "DOOR_LOCKED" end
     end
     if parentName:find("chest") or parentName:find("gold") or prompt.ActionText:lower():find("take") or prompt.ActionText:lower():find("lấy") then
         return "LOOT_ITEM"
@@ -497,10 +541,10 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN MOTE HUB (BETA 2.2)
+-- GIAO DIỆN MOTE HUB (BETA 2.5)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta22"
+screenGui.Name = "MoteHub_Beta25"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -538,7 +582,7 @@ local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.ne
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.2"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.5"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -736,7 +780,7 @@ createToggleSwitch(pages[1], Translations[Flags.Language].AutoLoot, "AutoLootAnd
 -- TAB 2: ESP
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
 createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Sách, Cầu Trì, Items)", "ESPItems", 40)
-createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bỏ Seek)", "ESPMonster", 75)
+createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Seek real)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
 createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
 createToggleSwitch(pages[2], "🟠 ESP Người Chơi (Full Highlight, Box, Tracer)", "ESPPlayer", 180)
@@ -825,8 +869,8 @@ applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 2.2",
-        Text = "Đã sẵn sàng! Sách & Cầu Trì sẽ tự động biến mất khi nhặt.",
+        Title = "MOTE HUB BETA 2.5",
+        Text = "Đã cập nhật cảnh báo TẤT CẢ Quái Vật & Lọc Bỏ Tranh Seek!",
         Duration = 5
     })
 end)
