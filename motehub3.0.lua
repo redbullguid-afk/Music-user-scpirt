@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.91 - TRACER FROM LOCAL CHARACTER
+-- MOTE HUB BETA 2.92 - FREECAM FIXED & TRACER ESP
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -75,8 +75,8 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.91" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.91" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.92" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.92" }
 }
 
 --------------------------------------------------
@@ -129,7 +129,7 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ (TỐI ĐA 3 TỦ) & AUTO LOOT
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT
 --------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
@@ -275,7 +275,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- CHẾ ĐỘ KHẢM GIẢ / LINH HỒN TÁCH XÁC (FREECAM SOUL)
+-- CHẾ ĐỘ KHẢM GIẢ / LINH HỒN TÁCH XÁC (SỬA HOÀN TOÀN LỖI)
 --------------------------------------------------
 local freecamPart = nil
 local isFreecamActive = false
@@ -290,17 +290,20 @@ local function setFreecamState(state)
         if humanoid then humanoid.PlatformStand = true end
         hrp.Anchored = true
 
-        freecamPart = Instance.new("Part")
-        freecamPart.Name = "Mote_Freecam_Soul"
-        freecamPart.Size = Vector3.new(1, 1, 1)
-        freecamPart.Transparency = 1
-        freecamPart.CanCollide = false
-        freecamPart.Anchored = true
+        if not freecamPart or not freecamPart.Parent then
+            freecamPart = Instance.new("Part")
+            freecamPart.Name = "Mote_Freecam_Soul"
+            freecamPart.Size = Vector3.new(0.5, 0.5, 0.5)
+            freecamPart.Transparency = 1
+            freecamPart.CanCollide = false
+            freecamPart.Anchored = true
+            freecamPart.Parent = Workspace
+        end
         freecamPart.CFrame = Camera.CFrame
-        freecamPart.Parent = Workspace
 
+        -- Giữ CameraType Custom để người dùng có thể xoay màn hình tự do trên điện thoại
         Camera.CameraSubject = freecamPart
-        Camera.CameraType = Enum.CameraType.Scriptable
+        Camera.CameraType = Enum.CameraType.Custom
         isFreecamActive = true
     else
         isFreecamActive = false
@@ -324,20 +327,18 @@ RunService.RenderStepped:Connect(function(dt)
         local moveDir = humanoid and humanoid.MoveDirection or Vector3.new(0, 0, 0)
         local speed = 25 * Flags.SpeedMultiplier
         
-        local lookVector = Camera.CFrame.LookVector
-        local rightVector = Camera.CFrame.RightVector
+        -- Chỉ lấy hướng di chuyển trên mặt phẳng XZ (Triệt tiêu trục Y để không bị bay lên/xuống khi tiến lùi)
+        local horizontalMove = Vector3.new(moveDir.X, 0, moveDir.Z)
         
-        local moveVector = (rightVector * moveDir.X) + (lookVector * -moveDir.Z)
-        local verticalVector = Vector3.new(0, flyVerticalSpeed, 0) * dt
+        -- Độ cao chỉ được quyết định duy nhất bởi nút bấm ▲ / ▼ (flyVerticalSpeed)
+        local verticalMove = Vector3.new(0, flyVerticalSpeed, 0) * dt
         
-        local newPos = freecamPart.Position + (moveVector * speed * dt) + verticalVector
-        freecamPart.CFrame = CFrame.new(newPos, newPos + Camera.CFrame.LookVector)
-        Camera.CFrame = freecamPart.CFrame
+        freecamPart.Position = freecamPart.Position + (horizontalMove * speed * dt) + verticalMove
     end
 end)
 
 --------------------------------------------------
--- ESP BILLBOARD GUI (CỬA, VẬT PHẨM, QUÁI, CẦN GẠT)
+-- ESP BILLBOARD GUI
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     local billboard = Instance.new("BillboardGui")
@@ -374,7 +375,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI & DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT NGƯỜI DÙNG
+-- ESP NGƯỜI CHƠI & DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -448,7 +449,6 @@ local function setupFullPlayerESP(plr)
                     box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    -- BẮT ĐẦU DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT NGƯỜI DÙNG SÀI SCRIPT
                     local startScreenPos = nil
                     if isFreecamActive and freecamPart then
                         local startPos3D, startOnScreen = Camera:WorldToViewportPoint(freecamPart.Position)
@@ -485,7 +485,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- HỆ THỐNG CẢNH BÁO QUÁI VẬT
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ
 --------------------------------------------------
 local notifiedMonsters = {}
 local lastNoticeTimes = {}
@@ -495,13 +495,10 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     if notifiedMonsters[monsterObj] then return end
 
     local now = tick()
-    if lastNoticeTimes[rawMonsterName] and (now - lastNoticeTimes[rawMonsterName] < 12) then
-        return
-    end
+    if lastNoticeTimes[rawMonsterName] and (now - lastNoticeTimes[rawMonsterName] < 12) then return end
 
     notifiedMonsters[monsterObj] = true
     lastNoticeTimes[rawMonsterName] = now
-    
     local actionText = MonsterAdvice[rawMonsterName] or "Cẩn thận quái vật này!"
 
     pcall(function()
@@ -517,9 +514,6 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     end)
 end
 
---------------------------------------------------
--- XỬ LÝ QUÉT VẬT THỂ & LỌC QUÁI VẬT CHUẨN XÁC
---------------------------------------------------
 local function processObject(obj)
     pcall(function()
         if not obj then return end
@@ -528,9 +522,7 @@ local function processObject(obj)
 
         if nameLower:find("painting") or nameLower:find("frame") or nameLower:find("eyes_seek") or nameLower:find("seek_eyes") 
             or nameLower:find("prop") or nameLower:find("decal") or parentNameLower:find("asset") or parentNameLower:find("room") then
-            if not (nameLower:find("moving") or nameLower:find("rig") or obj:IsA("Model")) then
-                return
-            end
+            if not (nameLower:find("moving") or nameLower:find("rig") or obj:IsA("Model")) then return end
         end
 
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
@@ -555,32 +547,19 @@ local function processObject(obj)
         end
 
         local detectedMonsterName = nil
-        if nameLower:find("rushmoving") or nameLower == "rush" then 
-            detectedMonsterName = "Rush"
-        elseif nameLower:find("ambushmoving") or nameLower == "ambush" then 
-            detectedMonsterName = "Ambush"
-        elseif (nameLower:find("seekmoving") or nameLower == "seekrig") and obj:IsA("Model") then 
-            detectedMonsterName = "Seek"
-        elseif nameLower == "screech" and (obj:IsA("Model") or obj:FindFirstChildOfClass("Humanoid") or obj:FindFirstChild("Attachment")) then 
-            detectedMonsterName = "Screech"
-        elseif nameLower == "eyes" and obj:IsA("Model") and not parentNameLower:find("seek") then 
-            detectedMonsterName = "Eyes"
-        elseif nameLower == "halt" then 
-            detectedMonsterName = "Halt"
-        elseif (nameLower:find("figurerig") or (nameLower == "figure" and obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid"))) then 
-            detectedMonsterName = "Figure"
-        elseif nameLower == "hide" then 
-            detectedMonsterName = "Hide"
-        elseif nameLower == "jack" then 
-            detectedMonsterName = "Jack"
-        elseif nameLower:find("timothy") or nameLower:find("spider") then 
-            detectedMonsterName = "Timothy"
-        elseif nameLower == "dread" then 
-            detectedMonsterName = "Dread"
-        elseif nameLower == "a60" or nameLower == "a-60" then 
-            detectedMonsterName = "A-60"
-        elseif nameLower == "a120" or nameLower == "a-120" then 
-            detectedMonsterName = "A-120"
+        if nameLower:find("rushmoving") or nameLower == "rush" then detectedMonsterName = "Rush"
+        elseif nameLower:find("ambushmoving") or nameLower == "ambush" then detectedMonsterName = "Ambush"
+        elseif (nameLower:find("seekmoving") or nameLower == "seekrig") and obj:IsA("Model") then detectedMonsterName = "Seek"
+        elseif nameLower == "screech" and (obj:IsA("Model") or obj:FindFirstChildOfClass("Humanoid") or obj:FindFirstChild("Attachment")) then detectedMonsterName = "Screech"
+        elseif nameLower == "eyes" and obj:IsA("Model") and not parentNameLower:find("seek") then detectedMonsterName = "Eyes"
+        elseif nameLower == "halt" then detectedMonsterName = "Halt"
+        elseif (nameLower:find("figurerig") or (nameLower == "figure" and obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid"))) then detectedMonsterName = "Figure"
+        elseif nameLower == "hide" then detectedMonsterName = "Hide"
+        elseif nameLower == "jack" then detectedMonsterName = "Jack"
+        elseif nameLower:find("timothy") or nameLower:find("spider") then detectedMonsterName = "Timothy"
+        elseif nameLower == "dread" then detectedMonsterName = "Dread"
+        elseif nameLower == "a60" or nameLower == "a-60" then detectedMonsterName = "A-60"
+        elseif nameLower == "a120" or nameLower == "a-120" then detectedMonsterName = "A-120"
         end
 
         if detectedMonsterName then
@@ -638,10 +617,10 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN GUI MOTE HUB (BETA 2.91)
+-- GIAO DIỆN GUI MOTE HUB
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta291"
+screenGui.Name = "MoteHub_Beta292"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -679,7 +658,7 @@ local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.ne
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.91"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.92"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -735,7 +714,7 @@ for i, name in ipairs(tabNames) do
 end
 
 --------------------------------------------------
--- TẠO TOGGLE VÀ SLIDER
+-- TOGGLE VÀ SLIDER UI
 --------------------------------------------------
 local function createToggleSwitch(parent, labelText, flagName, posY, callback)
     local container = Instance.new("Frame")
@@ -827,7 +806,7 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
 end
 
 --------------------------------------------------
--- NÚT NHẢY VÀ NÚT BAY
+-- NÚT NHẢY VÀ NÚT ĐIỀU CHỈNH ĐỘ CAO (BAY / KHẢM GIẢ)
 --------------------------------------------------
 local jumpButtonUI = Instance.new("TextButton")
 jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
@@ -869,7 +848,7 @@ local function updateFlyControlVisibility()
 end
 
 --------------------------------------------------
--- NỘI DUNG TẤT CẢ TABS
+-- NỘI DUNG CÁC TABS
 --------------------------------------------------
 -- TAB 1: MAIN
 createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
@@ -983,8 +962,8 @@ applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 2.91",
-        Text = "Đã nối Tracer ESP trực tiếp từ thân nhân vật của bạn!",
+        Title = "MOTE HUB BETA 2.92",
+        Text = "Đã fix lỗi Khảm Giả & hỗ trợ xoay màn hình!",
         Duration = 5
     })
 end)
