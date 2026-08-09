@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.7 - FIXED AUTO DOOR, AUTO DRAWERS & AUTO LOOT
+-- MOTE HUB BETA 2.8 - ULTIMATE FIXED EDITION
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -31,8 +31,8 @@ local Flags = {
     ESPChest = false,
     ESPPlayer = false,
     
-    AutoDrawersLoot = false, -- Auto Mở 3 Tủ & Loot Đồ
-    AutoKeyDoor = false,     -- Auto Mở Cửa Bằng Chìa Khóa
+    AutoDrawersLoot = false, -- Auto Mở Tủ & Auto Loot Đồ
+    AutoKeyDoor = false,     -- Auto Mở Cửa Key
     
     NoClip = false,
     DoorsJump = false,
@@ -60,9 +60,9 @@ local OriginalLighting = {
 --------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
-    RedBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
-    GreenBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
-    PinkBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
+    RedBlack    = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
+    GreenBlack  = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
+    PinkBlack   = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
 }
 
 local ESPColors = {
@@ -75,8 +75,8 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật Thông Minh", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở 3 Kệ Tủ & Loot Đồ (Bán kính gần)", AutoDoorKey = "2. Auto Mở Cửa Bằng Chìa Khóa (Fix Xung Đột)", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Tối đa x4)", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo (Minecraft Fly)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ (Language)", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.7" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Loot Items", AutoDoorKey = "2. Auto Key Door (Conflict Fixed)", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly (Minecraft)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.7" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ & Auto Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", ThirdPerson = "4. Góc Nhìn Thứ 3", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.8" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Info = "Info", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", ThirdPerson = "4. Third Person View", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.8" }
 }
 
 --------------------------------------------------
@@ -84,21 +84,21 @@ local Translations = {
 --------------------------------------------------
 local ImportantItems = {
     ["KeyObtain"] = "🔑 Chìa Khóa", ["Key"] = "🔑 Chìa Khóa", ["MasterKey"] = "🔑 Chìa Khóa Master",
-    ["SkeletonKey"] = "💀 Chìa Khóa Đầu Lâu",
-    ["Flashlight"] = "🔦 Đèn Pin", ["Candle"] = "🕯️ Nến", ["Crucifix"] = "✝️ Cây Thánh Giá",
-    ["Lockpick"] = "🗝️ Lockpick", ["Bandage"] = "🩹 Băng Gạc", ["Vitamins"] = "💊 Vitamin",
-    ["Battery"] = "🔋 Pin", ["LiveHintBook"] = "📘 Sách", ["FuseInPlainSight"] = "🔋 Cầu Chì"
+    ["SkeletonKey"] = "💀 Chìa Khóa Đầu Lâu", ["Flashlight"] = "🔦 Đèn Pin", ["Candle"] = "🕯️ Nến",
+    ["Crucifix"] = "✝️ Cây Thánh Giá", ["Lockpick"] = "🗝️ Lockpick", ["Bandage"] = "🩹 Băng Gạc",
+    ["Vitamins"] = "💊 Vitamin", ["Battery"] = "🔋 Pin", ["LiveHintBook"] = "📘 Sách",
+    ["FuseInPlainSight"] = "🔋 Cầu Chì", ["Gold"] = "💰 Tiền Gold", ["Coin"] = "🪙 Tiền Xu"
 }
 
 local MonsterAdvice = {
     ["Rush"] = "Trốn vô tủ mau!", ["Ambush"] = "Trốn vô tủ mau!", ["Seek"] = "Chuẩn bị chạy trốn Seek!",
     ["Screech"] = "Xoay người nhìn nó ngay!", ["Eyes"] = "Không nhìn vào nó!", ["Halt"] = "Chú ý đổi hướng di chuyển!",
     ["Figure"] = "Đi cúi người (Crouch), giữ khoảng cách!", ["Hide"] = "Rời khỏi tủ ngay!", ["Jack"] = "Chờ 1 chút rồi mở lại tủ!",
-    ["Timothy"] = "Nhện giật mình trong hộc bàn!", ["Dread"] = "Mở cửa tiến lên phía trước mau!", ["A-60"] = "Trốn vô tủ / chỗ nấp ngay!", ["A-120"] = "Trốn vô tủ ngay!"
+    ["Timothy"] = "Nhện giật mình trong hộc bàn!", ["Dread"] = "Mở cửa tiến lên phía trước mau!", ["A-60"] = "Trốn vô tủ ngay!", ["A-120"] = "Trốn vô tủ ngay!"
 }
 
 --------------------------------------------------
--- HỆ THỐNG CẬP NHẬT FONT SIZE REAL-TIME
+-- HỆ THỐNG FONT SIZE REAL-TIME
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
@@ -112,7 +112,7 @@ local function updateAllTextSizes()
 end
 
 --------------------------------------------------
--- LOGIC TỰ ĐỘNG TƯƠNG TÁC (LOOT & DOOR KEY)
+-- HAM TƯƠNG TÁC SAFE PROXIMITY PROMPT
 --------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
@@ -128,38 +128,41 @@ local function safeInteract(prompt)
     return true
 end
 
--- 1. Auto Mở 3 Hộc Tủ Cùng Lúc & Loot Tiền/Vật Phẩm
+--------------------------------------------------
+-- LOGIC FIX 3: AUTO MỞ 3 TỦ VÀ AUTO LOOT LIÊN TỤC
+--------------------------------------------------
 task.spawn(function()
-    while task.wait(0.15) do
+    while task.wait(0.1) do
         if Flags.AutoDrawersLoot and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local playerPos = hrp.Position
-                local lookVector = hrp.CFrame.LookVector
+                local openedDrawers = 0
                 
-                local openedDrawersCount = 0
-                
+                -- Quét toàn bộ ProximityPrompt trong phạm vi gần (12 studs)
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local parent = prompt.Parent
-                        if parent and parent:IsA("BasePart") then
-                            local dist = (parent.Position - playerPos).Magnitude
-                            -- Kiểm tra bán kính thấp (~10 studs) và nằm ở khoảng phía trước mặt
-                            if dist <= 10.5 then
-                                local dir = (parent.Position - playerPos).Unit
-                                local dot = lookVector:Dot(dir)
-                                
-                                if dot > 0.15 then
+                        if parent then
+                            local targetPart = parent:IsA("BasePart") and parent or parent:FindFirstChildWhichIsA("BasePart", true)
+                            if targetPart then
+                                local dist = (targetPart.Position - playerPos).Magnitude
+                                if dist <= 12 then
                                     local nameLower = parent.Name:lower()
-                                    local pNameLower = parent.Parent and parent.Parent.Name:lower() or ""
+                                    local pNameLower = (parent.Parent and parent.Parent.Name:lower()) or ""
                                     
-                                    -- Nhặt Tiền & Items
-                                    if nameLower:find("gold") or nameLower:find("coin") or ImportantItems[parent.Name] or ImportantItems[parent.Parent.Name] then
+                                    -- 1. Auto Loot Tiền & Vật phẩm (Kể cả vật phẩm bên trong tủ vừa mở)
+                                    local isLootItem = nameLower:find("gold") or nameLower:find("coin") or nameLower:find("item") 
+                                        or ImportantItems[parent.Name] or ImportantItems[parent.Parent and parent.Parent.Name or ""]
+                                        or prompt.ActionText:lower():find("take") or prompt.ActionText:lower():find("loot")
+                                        or prompt.ObjectText:lower():find("gold") or prompt.ObjectText:lower():find("coin")
+
+                                    if isLootItem then
                                         safeInteract(prompt)
-                                    -- Mở 3 Kệ / Hộc Tủ cùng lúc
-                                    elseif (nameLower:find("drawer") or pNameLower:find("drawer") or nameLower:find("knob")) and openedDrawersCount < 3 then
+                                    -- 2. Auto Mở tối đa 3 hộc tủ cùng lúc
+                                    elseif (nameLower:find("drawer") or pNameLower:find("drawer") or nameLower:find("knob")) and openedDrawers < 3 then
                                         if safeInteract(prompt) then
-                                            openedDrawersCount = openedDrawersCount + 1
+                                            openedDrawers = openedDrawers + 1
                                         end
                                     end
                                 end
@@ -172,21 +175,21 @@ task.spawn(function()
     end
 end)
 
--- 2. Auto Mở Cửa Bằng Chìa Khóa (Xử lý không bị kẹt/xung đột)
+--------------------------------------------------
+-- LOGIC AUTO MỞ CỬA BẰNG KEY (FIX XUNG ĐỘT)
+--------------------------------------------------
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.15) do
         if Flags.AutoKeyDoor and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             local char = LocalPlayer.Character
             
-            -- Kiểm tra xem nhân vật có đang cầm key hoặc có key trong balo
             local hasKey = char:FindFirstChild("Key") or char:FindFirstChild("KeyObtain") or LocalPlayer.Backpack:FindFirstChild("Key") or LocalPlayer.Backpack:FindFirstChild("KeyObtain")
             
             if hrp and hasKey then
                 for _, obj in ipairs(Workspace:GetDescendants()) do
                     if obj.Name == "Door" and obj:IsA("Model") then
                         local nameLower = obj.Name:lower()
-                        -- Bộ lọc loại trừ cửa giả (Dupe), cửa bẫy
                         if not nameLower:find("dupe") and not obj:FindFirstChild("DupeDoor") then
                             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
                             if doorPart then
@@ -280,7 +283,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- ESP CHỮ ĐƠN GIẢN
+-- ESP BILLBOARD GUI (CỬA, VẬT PHẨM, QUÁI, CẦN GẠT)
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     local billboard = Instance.new("BillboardGui")
@@ -317,7 +320,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- LOGIC FIX 1: ESP NGƯỜI CHƠI & DÂY NỐI (TRACER FIX)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -375,7 +378,7 @@ local function setupFullPlayerESP(plr)
                     label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
                 end
 
-                local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local targetPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                 if onScreen then
                     local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
                     local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
@@ -383,11 +386,12 @@ local function setupFullPlayerESP(plr)
                     local width = height / 1.5
 
                     box.Size = Vector2.new(width, height)
-                    box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
+                    box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                    line.To = Vector2.new(pos.X, pos.Y)
+                    -- Dây nối chuẩn từ giữa phía dưới màn hình chính chủ tới HumanoidRootPart của đối phương
+                    line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y - 10)
+                    line.To = Vector2.new(targetPos.X, targetPos.Y)
                     line.Visible = true
                 else
                     box.Visible = false; line.Visible = false
@@ -406,7 +410,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- SMART MONSTER NOTIFIER
+-- CẢNH BÁO QUÁI VẬT
 --------------------------------------------------
 local notifiedMonsters = {}
 local lastSeekNoticeTime = 0
@@ -416,7 +420,6 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     if notifiedMonsters[monsterObj] then return end
 
     local nameLower = rawMonsterName:lower()
-
     if nameLower:find("seek") then
         local currentTime = tick()
         if currentTime - lastSeekNoticeTime < 180 then return end
@@ -435,17 +438,19 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     end)
 
     monsterObj.AncestryChanged:Connect(function(_, parent)
-        if not parent then
-            notifiedMonsters[monsterObj] = nil
-        end
+        if not parent then notifiedMonsters[monsterObj] = nil end
     end)
 end
 
+--------------------------------------------------
+-- XỬ LÝ QUÉT VẬT THỂ & ESP (LOGIC FIX 2: BỘ LỌC RƯƠNG ĐỒ KHÔNG NHẦM CỬA SỔ)
+--------------------------------------------------
 local function processObject(obj)
     pcall(function()
         if not obj then return end
         local nameLower = obj.Name:lower()
 
+        -- Bỏ qua trang trí, khung ảnh, kính, decal
         if nameLower:find("painting") or nameLower:find("frame") or nameLower:find("eyes_seek") or nameLower:find("seek_eyes") or nameLower:find("prop") or nameLower:find("decal") then
             return
         end
@@ -456,17 +461,23 @@ local function processObject(obj)
             if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
         end
 
-        -- ESP Cần Gạt
+        -- ESP Cần Gạt / Breaker Box
         if (nameLower:find("lever") or nameLower:find("breaker") or nameLower:find("switch") or nameLower:find("electric")) and not obj:FindFirstChild("Mote_ESP_ESPLever", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever") end
         end
 
-        -- ESP Rương Đồ (Lọc Cửa Sổ)
-        local isChestName = nameLower:find("chest") or (nameLower:find("box") and not nameLower:find("window") and not nameLower:find("hitbox") and not nameLower:find("light"))
-        if isChestName and not nameLower:find("drawer") and not nameLower:find("cabinet") and not nameLower:find("window") and not obj:FindFirstChild("Mote_ESP_ESPChest", true) then
-            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then createBillboard(targetPart, "📦 Rương Đồ", ESPColors.Chest, "ESPChest") end
+        -- FIX 2: BỘ LỌC ESP RƯƠNG ĐỒ CHUẨN XÁC (Loại bỏ tuyệt đối Cửa Sổ, Kính, Tường)
+        local isWindow = nameLower:find("window") or nameLower:find("glass") or nameLower:find("pane") or nameLower:find("frame") or nameLower:find("wall")
+        local isChest = (nameLower:find("chest") or nameLower == "box" or nameLower == "lootbox") and not isWindow and not nameLower:find("hitbox") and not nameLower:find("light") and not nameLower:find("drawer") and not nameLower:find("cabinet")
+        
+        if isChest and not obj:FindFirstChild("Mote_ESP_ESPChest", true) then
+            -- Kiểm tra xem vật thể có ProximityPrompt tương tác mở rương không
+            local hasPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+            if hasPrompt or nameLower:find("chest") then
+                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+                if targetPart then createBillboard(targetPart, "📦 Rương Đồ", ESPColors.Chest, "ESPChest") end
+            end
         end
 
         -- ESP Quái
@@ -542,10 +553,10 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN MOTE HUB (BETA 2.7)
+-- GIAO DIỆN GUI MOTE HUB (BETA 2.8)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta27"
+screenGui.Name = "MoteHub_Beta28"
 screenGui.ResetOnSpawn = false
 pcall(function() screenGui.Parent = CoreGui end)
 if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
@@ -583,7 +594,7 @@ local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.ne
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.7"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 2.8"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -779,13 +790,13 @@ createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 1
 
 -- TAB 2: ESP
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
-createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Sách, Cầu Trì, Items)", "ESPItems", 40)
+createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Sách, Cầu Chì, Items)", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Seek real)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
-createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
-createToggleSwitch(pages[2], "🟠 ESP Người Chơi (Full Highlight, Box, Tracer)", "ESPPlayer", 180)
+createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest - Lọc Cửa Sổ chuẩn)", "ESPChest", 145)
+createToggleSwitch(pages[2], "🟠 ESP Người Chơi (Fix Dây Nối từ người chơi)", "ESPPlayer", 180)
 
--- TAB 3: AUTOMATION (TỰ ĐỘNG)
+-- TAB 3: AUTOMATION
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDrawers, "AutoDrawersLoot", 5)
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDoorKey, "AutoKeyDoor", 40)
 
@@ -862,8 +873,8 @@ applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 2.7",
-        Text = "Đã sửa Auto Mở Tủ, Loot Đồ & Auto Cửa Key chuẩn xác!",
+        Title = "MOTE HUB BETA 2.8",
+        Text = "Đã fix hoàn toàn ESP dây nối, ESP Rương đồ & Tự động Loot vật phẩm!",
         Duration = 5
     })
 end)
