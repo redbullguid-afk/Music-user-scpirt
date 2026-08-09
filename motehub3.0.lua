@@ -112,7 +112,7 @@ local function updateAllTextSizes()
 end
 
 --------------------------------------------------
--- HAM TƯƠNG TÁC SAFE PROXIMITY PROMPT
+-- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT
 --------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
@@ -129,15 +129,17 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC FIX 3: AUTO MỞ 3 TỦ VÀ AUTO LOOT LIÊN TỤC
+-- LOGIC FIX 3: AUTO MỞ TỦ AN TOÀN & AUTO LOOT
 --------------------------------------------------
+local isOpeningDrawer = false
+local DRAWER_COOLDOWN = 0.35 -- Thời gian chờ an toàn để tránh hỏng/kẹt hộc tủ
+
 task.spawn(function()
     while task.wait(0.1) do
         if Flags.AutoDrawersLoot and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local playerPos = hrp.Position
-                local openedDrawers = 0
                 
                 -- Quét toàn bộ ProximityPrompt trong phạm vi gần (12 studs)
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
@@ -151,7 +153,7 @@ task.spawn(function()
                                     local nameLower = parent.Name:lower()
                                     local pNameLower = (parent.Parent and parent.Parent.Name:lower()) or ""
                                     
-                                    -- 1. Auto Loot Tiền & Vật phẩm (Kể cả vật phẩm bên trong tủ vừa mở)
+                                    -- 1. Auto Loot Tiền & Vật phẩm (Thực hiện tức thì)
                                     local isLootItem = nameLower:find("gold") or nameLower:find("coin") or nameLower:find("item") 
                                         or ImportantItems[parent.Name] or ImportantItems[parent.Parent and parent.Parent.Name or ""]
                                         or prompt.ActionText:lower():find("take") or prompt.ActionText:lower():find("loot")
@@ -159,10 +161,13 @@ task.spawn(function()
 
                                     if isLootItem then
                                         safeInteract(prompt)
-                                    -- 2. Auto Mở tối đa 3 hộc tủ cùng lúc
-                                    elseif (nameLower:find("drawer") or pNameLower:find("drawer") or nameLower:find("knob")) and openedDrawers < 3 then
-                                        if safeInteract(prompt) then
-                                            openedDrawers = openedDrawers + 1
+                                    -- 2. Auto Mở Tủ có khoảng nghỉ (Tránh spam văng/hỏng kệ tủ)
+                                    elseif (nameLower:find("drawer") or pNameLower:find("drawer") or nameLower:find("knob") or nameLower:find("closet")) then
+                                        if not isOpeningDrawer then
+                                            isOpeningDrawer = true
+                                            safeInteract(prompt)
+                                            task.wait(DRAWER_COOLDOWN)
+                                            isOpeningDrawer = false
                                         end
                                     end
                                 end
@@ -320,7 +325,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- LOGIC FIX 1: ESP NGƯỜI CHƠI & DÂY NỐI (TRACER FIX)
+-- LOGIC FIX 1: ESP NGƯỜI CHƠI & DÂY NỐI CHUẨN XÁC
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -378,7 +383,9 @@ local function setupFullPlayerESP(plr)
                     label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
                 end
 
+                -- Chuyển tọa độ 3D HumanoidRootPart của đối phương sang 2D Viewport
                 local targetPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                
                 if onScreen then
                     local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
                     local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
@@ -389,8 +396,8 @@ local function setupFullPlayerESP(plr)
                     box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    -- Dây nối chuẩn từ giữa phía dưới màn hình chính chủ tới HumanoidRootPart của đối phương
-                    line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y - 10)
+                    -- Dây nối chuẩn từ điểm giữa đáy màn hình kết nối trực tiếp đến Player
+                    line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                     line.To = Vector2.new(targetPos.X, targetPos.Y)
                     line.Visible = true
                 else
@@ -443,7 +450,7 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
 end
 
 --------------------------------------------------
--- XỬ LÝ QUÉT VẬT THỂ & ESP (LOGIC FIX 2: BỘ LỌC RƯƠNG ĐỒ KHÔNG NHẦM CỬA SỔ)
+-- XỬ LÝ QUÉT VẬT THỂ & ESP
 --------------------------------------------------
 local function processObject(obj)
     pcall(function()
@@ -467,12 +474,11 @@ local function processObject(obj)
             if targetPart then createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever") end
         end
 
-        -- FIX 2: BỘ LỌC ESP RƯƠNG ĐỒ CHUẨN XÁC (Loại bỏ tuyệt đối Cửa Sổ, Kính, Tường)
+        -- ESP RƯƠNG ĐỒ CHUẨN XÁC (Loại bỏ Cửa Sổ, Kính, Tường)
         local isWindow = nameLower:find("window") or nameLower:find("glass") or nameLower:find("pane") or nameLower:find("frame") or nameLower:find("wall")
         local isChest = (nameLower:find("chest") or nameLower == "box" or nameLower == "lootbox") and not isWindow and not nameLower:find("hitbox") and not nameLower:find("light") and not nameLower:find("drawer") and not nameLower:find("cabinet")
         
         if isChest and not obj:FindFirstChild("Mote_ESP_ESPChest", true) then
-            -- Kiểm tra xem vật thể có ProximityPrompt tương tác mở rương không
             local hasPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
             if hasPrompt or nameLower:find("chest") then
                 local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
@@ -874,7 +880,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.8",
-        Text = "Đã fix hoàn toàn ESP dây nối, ESP Rương đồ & Tự động Loot vật phẩm!",
+        Text = "Đã sửa hoàn toàn ESP dây nối & Tự động mở tủ an toàn không bị hỏng hóc!",
         Duration = 5
     })
 end)
