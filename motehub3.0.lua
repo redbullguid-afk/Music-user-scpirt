@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.92 - FREECAM FIXED & TRACER ESP
+-- MOTE HUB BETA - FREECAM FIXED & TRACER ESP
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -503,7 +503,7 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
 
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "🚨 CẢNH BÁO QUÁI VẬT!",
+            Title = "🚨 CẢNH BÁO THỰC THỂ",
             Text = rawMonsterName .. " xuất hiện! " .. actionText,
             Duration = 5
         })
@@ -963,7 +963,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.92",
-        Text = "Đã fix lỗi Khảm Giả & hỗ trợ xoay màn hình!",
+        Text = "chào bạn!",
         Duration = 5
     })
 end)
