@@ -1057,7 +1057,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã fix hoàn tất lỗi UI & Tối ưu hiệu năng!",
+        Text = "Đã Fix hoàn tất lỗi UI & Tối ưu hiệu năng!",
         Duration = 5
     })
 end)
