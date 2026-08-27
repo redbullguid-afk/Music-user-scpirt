@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.00 - FIXED UI & PERFORMANCE OPTIMIZED
+-- MOTE HUB BETA 3.00 - MONSTER SAFE NOTIFICATION & ANTI-BYPASS
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -76,8 +76,8 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.00 (Fixed UI)" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.00 (Fixed UI)" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.00 (Safe Detection)" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.00 (Safe Detection)" }
 }
 
 --------------------------------------------------
@@ -115,20 +115,16 @@ local function getItemLabel(name)
 end
 
 --------------------------------------------------
--- HỆ THỐNG FONT SIZE REAL-TIME (TỐI ƯU CHỐNG TRÀN)
+-- HỆ THỐNG FONT SIZE REAL-TIME
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
     table.insert(TextSizeRegister, label)
     label.TextSize = Flags.TextSize
-    label.TextWrapped = true
 end
-
 local function updateAllTextSizes()
     for _, lbl in ipairs(TextSizeRegister) do
-        if lbl and lbl.Parent then 
-            lbl.TextSize = Flags.TextSize 
-        end
+        if lbl and lbl.Parent then lbl.TextSize = Flags.TextSize end
     end
 end
 
@@ -158,11 +154,12 @@ local DRAWER_COOLDOWN = 0.6
 local MAX_LOOT_DIST = 5
 
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.05) do
         if Flags.AutoDrawersLoot and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local playerPos = hrp.Position
+                
                 for _, prompt in ipairs(Workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") and prompt.Enabled then
                         local parent = prompt.Parent
@@ -205,10 +202,11 @@ end)
 -- LOGIC AUTO MỞ CỬA BẰNG KEY
 --------------------------------------------------
 task.spawn(function()
-    while task.wait(0.15) do
+    while task.wait(0.1) do
         if Flags.AutoKeyDoor and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             local char = LocalPlayer.Character
+            
             local hasKey = char:FindFirstChild("Key") or char:FindFirstChild("KeyObtain") or LocalPlayer.Backpack:FindFirstChild("Key") or LocalPlayer.Backpack:FindFirstChild("KeyObtain")
             
             if hrp and hasKey then
@@ -235,7 +233,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- SPEED HACK & ANTI-RUBBERBAND & NOCLIP
+-- TÍNH NĂNG SPEED HACK (10X) & ANTI-RUBBERBAND & NOCLIP
 --------------------------------------------------
 RunService.RenderStepped:Connect(function(dt)
     if LocalPlayer.Character then
@@ -251,14 +249,20 @@ RunService.RenderStepped:Connect(function(dt)
                     
                     if Flags.AntiRubberband then
                         local currentVel = hrp.AssemblyLinearVelocity
-                        hrp.AssemblyLinearVelocity = Vector3.new(humanoid.MoveDirection.X * 16, currentVel.Y, humanoid.MoveDirection.Z * 16)
+                        hrp.AssemblyLinearVelocity = Vector3.new(
+                            humanoid.MoveDirection.X * 16,
+                            currentVel.Y,
+                            humanoid.MoveDirection.Z * 16
+                        )
                     end
                 end
             end
 
             if Flags.NoClip then
                 for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
                 end
                 if Flags.AntiRubberband and hrp.AssemblyLinearVelocity.Magnitude > 80 then
                     hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
@@ -286,8 +290,9 @@ RunService.RenderStepped:Connect(function()
             
             humanoid.PlatformStand = true
             flyBodyGyro.CFrame = Camera.CFrame
+            local moveDir = humanoid.MoveDirection
             local speed = 20 * Flags.SpeedMultiplier
-            flyBodyVel.Velocity = (humanoid.MoveDirection * speed) + Vector3.new(0, flyVerticalSpeed, 0)
+            flyBodyVel.Velocity = (moveDir * speed) + Vector3.new(0, flyVerticalSpeed, 0)
         end
     else
         if LocalPlayer.Character and not Flags.FreecamSoul then
@@ -354,6 +359,7 @@ RunService.RenderStepped:Connect(function(dt)
         
         local horizontalMove = Vector3.new(moveDir.X, 0, moveDir.Z)
         local verticalMove = Vector3.new(0, flyVerticalSpeed, 0) * dt
+        
         freecamPart.Position = freecamPart.Position + (horizontalMove * speed * dt) + verticalMove
     end
 end)
@@ -377,6 +383,7 @@ local function createBillboard(targetPart, text, color, flagName)
     label.Font = Enum.Font.SourceSansBold
     label.TextColor3 = color
     label.Parent = billboard
+
     billboard.Parent = targetPart
 
     task.spawn(function()
@@ -395,7 +402,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (ĐÃ SỬA LỖI MEMORY LEAK DRAWING)
+-- ESP NGƯỜI CHƠI & THANH MÁU 2D
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -445,24 +452,16 @@ local function setupFullPlayerESP(plr)
         healthBar.Visible = false; healthBar.Filled = true; healthBar.Thickness = 0
 
         local renderConnection
-        local function cleanup()
-            if renderConnection then renderConnection:Disconnect() end
-            pcall(function() hl:Destroy() end)
-            pcall(function() bb:Destroy() end)
-            pcall(function() box:Remove() end)
-            pcall(function() line:Remove() end)
-            pcall(function() healthBarBg:Remove() end)
-            pcall(function() healthBar:Remove() end)
-        end
-
         renderConnection = RunService.RenderStepped:Connect(function()
             if not char or not char.Parent or not hrp or not hrp.Parent or not Players:FindFirstChild(plr.Name) then
-                cleanup()
+                hl:Destroy(); bb:Destroy(); box:Remove(); line:Remove(); healthBarBg:Remove(); healthBar:Remove()
+                if renderConnection then renderConnection:Disconnect() end
                 return
             end
 
             if Flags.ESPPlayer then
                 hl.Enabled = true; bb.Enabled = true
+                
                 local localChar = LocalPlayer.Character
                 local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
                 local targetHum = char:FindFirstChildOfClass("Humanoid")
@@ -498,10 +497,15 @@ local function setupFullPlayerESP(plr)
                         healthBar.Size = Vector2.new(barWidth, fillHeight)
                         healthBar.Position = Vector2.new(barX, barY + (height - fillHeight))
 
-                        if hpPercent >= 0.75 then healthBar.Color = Color3.fromRGB(0, 255, 0)
-                        elseif hpPercent >= 0.40 then healthBar.Color = Color3.fromRGB(255, 255, 0)
-                        elseif hpPercent >= 0.20 then healthBar.Color = Color3.fromRGB(255, 140, 0)
-                        else healthBar.Color = Color3.fromRGB(255, 0, 0) end
+                        if hpPercent >= 0.75 then
+                            healthBar.Color = Color3.fromRGB(0, 255, 0)
+                        elseif hpPercent >= 0.40 then
+                            healthBar.Color = Color3.fromRGB(255, 255, 0)
+                        elseif hpPercent >= 0.20 then
+                            healthBar.Color = Color3.fromRGB(255, 140, 0)
+                        else
+                            healthBar.Color = Color3.fromRGB(255, 0, 0)
+                        end
                         healthBar.Visible = true
                     else
                         healthBarBg.Visible = false; healthBar.Visible = false
@@ -512,15 +516,20 @@ local function setupFullPlayerESP(plr)
                         local startPos3D, startOnScreen = Camera:WorldToViewportPoint(freecamPart.Position)
                         if startOnScreen then startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y) end
                     elseif localHrp then
-                        local startPos3D, startOnScreen = Camera:WorldToViewportPoint(localHrp.Position)
-                        if startOnScreen then startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y) end
+                        local myBodyPos3D = localHrp.Position
+                        local startPos3D, startOnScreen = Camera:WorldToViewportPoint(myBodyPos3D)
+                        if startOnScreen then
+                            startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y)
+                        end
                     end
 
                     if startScreenPos then
                         line.From = startScreenPos
                         line.To = Vector2.new(targetPos.X, targetPos.Y)
                         line.Visible = true
-                    else line.Visible = false end
+                    else
+                        line.Visible = false
+                    end
                 else
                     box.Visible = false; line.Visible = false; healthBarBg.Visible = false; healthBar.Visible = false
                 end
@@ -538,7 +547,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & BÁO AN TOÀN CHUẨN XÁC
+-- CẢNH BÁO QUÁI VẬT & TỰ ĐỘNG BÁO AN TOÀN KHI QUÁI ĐI QUA
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -563,12 +572,14 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
         end)
     end
 
+    -- Theo dõi chính xác 100% thời điểm quái biến mất / rời khỏi Workspace
     local conn
     conn = monsterObj.AncestryChanged:Connect(function(_, parent)
         if not parent or not monsterObj:IsDescendantOf(Workspace) then
             if conn then conn:Disconnect() end
             activeMonstersList[monsterObj] = nil
 
+            -- Chỉ báo an toàn cho các quái di chuyển cào quét (Rush, Ambush, A-60, A-120)
             if rawMonsterName == "Rush" or rawMonsterName == "Ambush" or rawMonsterName == "A-60" or rawMonsterName == "A-120" then
                 pcall(function()
                     StarterGui:SetCore("SendNotification", {
@@ -658,9 +669,7 @@ local function processObject(obj)
 end
 
 for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
-Workspace.DescendantAdded:Connect(function(obj)
-    task.spawn(processObject, obj)
-end)
+Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
 -- ANTI-AFK & FULLBRIGHT
@@ -782,8 +791,7 @@ for i, name in ipairs(tabNames) do
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 6); c.Parent = btn
 
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -10, 1, -10); page.Position = UDim2.new(0, 5, 0, 5); page.BackgroundTransparency = 1; page.ScrollBarThickness = 4; page.Visible = (i == 1)
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.CanvasSize = UDim2.new(0, 0, 0, 0); page.Parent = contentFrame
+    page.Size = UDim2.new(1, -10, 1, -10); page.Position = UDim2.new(0, 5, 0, 5); page.BackgroundTransparency = 1; page.ScrollBarThickness = 4; page.Visible = (i == 1); page.Parent = contentFrame
     
     tabs[i] = btn; pages[i] = page
 
@@ -1027,7 +1035,7 @@ btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLangu
 btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
 --------------------------------------------------
--- MỞ / TẮT MENU (ĐÃ TỐI ƯU CHỐNG MÉO UI)
+-- MỞ / TẮT MENU
 --------------------------------------------------
 local isMenuAnimating = false
 circleBtn.MouseButton1Click:Connect(function()
@@ -1035,20 +1043,14 @@ circleBtn.MouseButton1Click:Connect(function()
     isMenuAnimating = true
 
     if mainFrame.Visible then
-        local tweenClose = TweenService:Create(mainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = UDim2.new(0, 520, 0, 0) })
+        local tweenClose = TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Size = UDim2.new(0, 0, 0, 0) })
         tweenClose:Play()
-        tweenClose.Completed:Connect(function() 
-            mainFrame.Visible = false
-            isMenuAnimating = false 
-        end)
+        tweenClose.Completed:Connect(function() mainFrame.Visible = false; isMenuAnimating = false end)
     else
-        mainFrame.Size = UDim2.new(0, 520, 0, 0)
-        mainFrame.Visible = true
-        local tweenOpen = TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Out), { Size = UDim2.new(0, 520, 0, 280) })
+        mainFrame.Size = UDim2.new(0, 0, 0, 0); mainFrame.Visible = true
+        local tweenOpen = TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 520, 0, 280) })
         tweenOpen:Play()
-        tweenOpen.Completed:Connect(function() 
-            isMenuAnimating = false 
-        end)
+        tweenOpen.Completed:Connect(function() isMenuAnimating = false end)
     end
 end)
 
@@ -1057,7 +1059,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã Fix hoàn tất lỗi UI & Tối ưu hiệu năng!",
+        Text = "Đã kích hoạt Cảnh báo Quái vật & Báo an toàn!",
         Duration = 5
     })
 end)
