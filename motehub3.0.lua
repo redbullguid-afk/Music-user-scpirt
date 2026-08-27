@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.00 - FIXED FLOOR 2 & MONSTER LOGIC
+-- MOTE HUB BETA 3.00 - ULTIMATE AUTO-REMOVE ESP ITEMS
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -370,17 +370,17 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- BỘ KIỂM TRẠNG THÁI TRUY VẤN VẬT PHẨM CHUYÊN SÂU
+-- BỘ KIỂM TRẠNG THÁI TRUY VẤN VẬT PHẨM TOÀN DIỆN
 --------------------------------------------------
 local function isItemValidAndUncollected(targetPart)
     if not targetPart or not targetPart.Parent or not targetPart:IsDescendantOf(Workspace) then
         return false
     end
 
-    -- 1. Kiểm tra nếu vật phẩm chuyển vị trí vào tay/balo người chơi
+    -- 1. Nếu vật phẩm chuyển sang thuộc tính của Nhân vật (Nhặt bởi bản thân hoặc đồng đội)
     local current = targetPart
     while current and current ~= Workspace do
-        if current:FindFirstChildOfClass("Humanoid") then
+        if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) then
             return false
         end
         current = current.Parent
@@ -390,7 +390,7 @@ local function isItemValidAndUncollected(targetPart)
     local itemModel = targetPart:FindFirstAncestorOfClass("Model") or targetPart.Parent or targetPart
     local prompt = itemModel:FindFirstChildWhichIsA("ProximityPrompt", true)
 
-    -- Nếu ProximityPrompt bị xóa vĩnh viễn (Destroy) hoặc bị ẩn/tắt (Enabled = false) -> Đã nhặt
+    -- Nếu ProximityPrompt bị hủy hoàn toàn hoặc bị khóa (Enabled = false) -> Đã nhặt
     if not prompt or not prompt.Enabled then
         return false
     end
@@ -399,7 +399,7 @@ local function isItemValidAndUncollected(targetPart)
 end
 
 --------------------------------------------------
--- ESP BILLBOARD GUI (SỬA LỖI TỰ HỦY KHI NHẶT VẬT PHẨM)
+-- ESP BILLBOARD GUI (LẮNG NGHE SỰ KIỆN ĐỒNG ĐỘI & BẤM E)
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     if not targetPart then return end
@@ -423,11 +423,45 @@ local function createBillboard(targetPart, text, color, flagName)
 
     billboard.Parent = targetPart
 
+    -- KẾT HỢP BẢO VỆ: Sự kiện xóa chủ động khi có tương tác
+    local connections = {}
+    local function cleanESP()
+        for _, conn in ipairs(connections) do
+            if conn then conn:Disconnect() end
+        end
+        pcall(function() billboard:Destroy() end)
+    end
+
+    if flagName == "ESPItems" then
+        local itemModel = targetPart:FindFirstAncestorOfClass("Model") or targetPart.Parent or targetPart
+        
+        -- Lắng nghe khi có người dùng (Bạn hoặc Đồng đội) kích hoạt nút E thành công
+        local prompt = itemModel:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if prompt then
+            table.insert(connections, prompt.Triggered:Connect(function()
+                task.wait(0.05)
+                cleanESP()
+            end))
+            table.insert(connections, prompt.TriggerEnded:Connect(function()
+                task.wait(0.05)
+                if not isItemValidAndUncollected(targetPart) then cleanESP() end
+            end))
+        end
+
+        -- Lắng nghe khi vật phẩm bị xóa khỏi Workspace (Đồng đội lấy vào túi)
+        table.insert(connections, targetPart.AncestryChanged:Connect(function(_, parent)
+            if not parent or not targetPart:IsDescendantOf(Workspace) then
+                cleanESP()
+            end
+        end))
+    end
+
+    -- VÒNG LẶP QUÉT LIÊN TỤC (Loop Tick 0.1s)
     task.spawn(function()
         while targetPart and targetPart.Parent and targetPart:IsDescendantOf(Workspace) do
-            -- Kiểm tra riêng cho ESP Items để xóa lập tức ngay khi nhặt xong
             if flagName == "ESPItems" then
                 if not isItemValidAndUncollected(targetPart) then
+                    cleanESP()
                     break
                 end
             end
@@ -441,7 +475,7 @@ local function createBillboard(targetPart, text, color, flagName)
             end
             task.wait(0.1)
         end
-        pcall(function() billboard:Destroy() end)
+        cleanESP()
     end)
 end
 
@@ -638,7 +672,6 @@ local function processObject(obj)
             detectedMonsterName = "Screech"
             monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower == "eyes" or nameLower == "eyesmoving" then
-            -- Chặn không cho bộ phận 'Eye/Eyes' của Giggle biến thành Eyes
             local pName = obj.Parent and obj.Parent.Name:lower() or ""
             if not pName:find("giggle", 1, true) then
                 detectedMonsterName = "Eyes"
@@ -648,7 +681,6 @@ local function processObject(obj)
             detectedMonsterName = "Halt"
             monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("figure", 1, true) then
-            -- CHỈ NHẬN FIGURE THỰC SỰ CÓ HUMANOID/ROOT
             local potentialModel = obj:IsA("Model") and obj or obj.Parent
             if potentialModel and (potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("Root") or potentialModel:FindFirstChildOfClass("Humanoid")) then
                 detectedMonsterName = "Figure"
@@ -669,7 +701,6 @@ local function processObject(obj)
         end
 
         if detectedMonsterName and monsterModel then
-            -- Chỉ gắn 1 ESP duy nhất lên cấp độ Model của con quái
             if not monsterModel:FindFirstChild("Mote_ESP_ESPMonster", true) then
                 local targetPart = monsterModel:FindFirstChild("HumanoidRootPart") 
                                 or monsterModel:FindFirstChild("Root") 
@@ -1099,7 +1130,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã sửa thành công lỗi ESP Vật Phẩm!",
+        Text = "Đã tối ưu xóa ESP tức thì khi Đồng đội/Bản thân nhặt!",
         Duration = 4
     })
 end)
