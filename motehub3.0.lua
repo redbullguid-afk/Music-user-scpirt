@@ -370,10 +370,41 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
+-- BỘ KIỂM TRẠNG THÁI TRUY VẤN VẬT PHẨM CHUYÊN SÂU
+--------------------------------------------------
+local function isItemValidAndUncollected(targetPart)
+    if not targetPart or not targetPart.Parent or not targetPart:IsDescendantOf(Workspace) then
+        return false
+    end
+
+    -- 1. Kiểm tra nếu vật phẩm chuyển vị trí vào tay/balo người chơi
+    local current = targetPart
+    while current and current ~= Workspace do
+        if current:FindFirstChildOfClass("Humanoid") then
+            return false
+        end
+        current = current.Parent
+    end
+
+    -- 2. Kiểm tra ProximityPrompt trong Model/Part vật phẩm
+    local itemModel = targetPart:FindFirstAncestorOfClass("Model") or targetPart.Parent or targetPart
+    local prompt = itemModel:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+    -- Nếu ProximityPrompt bị xóa vĩnh viễn (Destroy) hoặc bị ẩn/tắt (Enabled = false) -> Đã nhặt
+    if not prompt or not prompt.Enabled then
+        return false
+    end
+
+    return true
+end
+
+--------------------------------------------------
 -- ESP BILLBOARD GUI (SỬA LỖI TỰ HỦY KHI NHẶT VẬT PHẨM)
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     if not targetPart then return end
+    if targetPart:FindFirstChild("Mote_ESP_" .. flagName) then return end
+
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "Mote_ESP_" .. flagName
     billboard.Adornee = targetPart
@@ -394,25 +425,10 @@ local function createBillboard(targetPart, text, color, flagName)
 
     task.spawn(function()
         while targetPart and targetPart.Parent and targetPart:IsDescendantOf(Workspace) do
-            -- Kiểm tra riêng cho ESP Items để xóa ngay khi được nhặt
+            -- Kiểm tra riêng cho ESP Items để xóa lập tức ngay khi nhặt xong
             if flagName == "ESPItems" then
-                local isHeld = false
-                local ancestor = targetPart.Parent
-                while ancestor and ancestor ~= Workspace do
-                    if ancestor:FindFirstChildOfClass("Humanoid") then
-                        isHeld = true; break
-                    end
-                    ancestor = ancestor.Parent
-                end
-                
-                local prompt = targetPart:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if not prompt and targetPart.Parent then
-                    prompt = targetPart.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
-                end
-                
-                -- Nếu item bị cầm trên tay hoặc prompt bị vĩnh viễn tắt/xóa -> TỰ HỦY ESP
-                if isHeld or (prompt and not prompt.Enabled) then 
-                    break 
+                if not isItemValidAndUncollected(targetPart) then
+                    break
                 end
             end
 
@@ -423,7 +439,7 @@ local function createBillboard(targetPart, text, color, flagName)
             else
                 billboard.Enabled = false
             end
-            task.wait(0.25)
+            task.wait(0.1)
         end
         pcall(function() billboard:Destroy() end)
     end)
@@ -575,7 +591,7 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
 end
 
 --------------------------------------------------
--- BỘ BỘC QUÁI VẬT & MÔ HÌNH CHÍNH XÁC (SỬA TRIỆT ĐỂ LỖI)
+-- BỘ BỘC QUÁI VẬT & MÔ HÌNH CHÍNH XÁC
 --------------------------------------------------
 local function processObject(obj)
     pcall(function()
@@ -632,7 +648,7 @@ local function processObject(obj)
             detectedMonsterName = "Halt"
             monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("figure", 1, true) then
-            -- CHỈ NHẬN FIGURE THỰC SỰ CÓ HUMANOID/ROOT (Lọc sạch Node/Map Dummy gây thông báo ảo mỗi lần mở cửa)
+            -- CHỈ NHẬN FIGURE THỰC SỰ CÓ HUMANOID/ROOT
             local potentialModel = obj:IsA("Model") and obj or obj.Parent
             if potentialModel and (potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("Root") or potentialModel:FindFirstChildOfClass("Humanoid")) then
                 detectedMonsterName = "Figure"
@@ -653,7 +669,7 @@ local function processObject(obj)
         end
 
         if detectedMonsterName and monsterModel then
-            -- Chỉ gắn 1 ESP duy nhất lên cấp độ Model của con quái (Sửa lỗi 1 con ra nhiều ESP)
+            -- Chỉ gắn 1 ESP duy nhất lên cấp độ Model của con quái
             if not monsterModel:FindFirstChild("Mote_ESP_ESPMonster", true) then
                 local targetPart = monsterModel:FindFirstChild("HumanoidRootPart") 
                                 or monsterModel:FindFirstChild("Root") 
@@ -1083,7 +1099,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã sửa thành công toàn bộ lỗi Floor 2!",
+        Text = "Đã sửa thành công lỗi ESP Vật Phẩm!",
         Duration = 4
     })
 end)
