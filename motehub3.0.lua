@@ -16,7 +16,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 --------------------------------------------------
--- CẤU HÌNH TRẠNG THÁI (FLAGS)[cite: 7]
+-- CẤU HÌNH TRẠNG THÁI (FLAGS)
 --------------------------------------------------
 local Flags = {
     AntiAFK = true,
@@ -57,7 +57,7 @@ local OriginalLighting = {
 }
 
 --------------------------------------------------
--- PALETTE MÀU THEME MENU & MÀU ESP[cite: 7]
+-- PALETTE MÀU THEME MENU & MÀU ESP
 --------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
@@ -81,7 +81,7 @@ local Translations = {
 }
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT[cite: 7]
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -115,7 +115,7 @@ local function getItemLabel(name)
 end
 
 --------------------------------------------------
--- HỆ THỐNG FONT SIZE REAL-TIME (TỐI ƯU CHỐNG TRÀN)[cite: 7]
+-- HỆ THỐNG FONT SIZE REAL-TIME
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
@@ -133,7 +133,7 @@ local function updateAllTextSizes()
 end
 
 --------------------------------------------------
--- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT[cite: 7]
+-- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT
 --------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
@@ -150,7 +150,7 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ & AUTO LOOT[cite: 7]
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT
 --------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
@@ -202,7 +202,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC AUTO MỞ CỬA BẰNG KEY[cite: 7]
+-- LOGIC AUTO MỞ CỬA BẰNG KEY
 --------------------------------------------------
 task.spawn(function()
     while task.wait(0.15) do
@@ -235,7 +235,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- SPEED HACK & ANTI-RUBBERBAND & NOCLIP[cite: 7]
+-- SPEED HACK & ANTI-RUBBERBAND & NOCLIP
 --------------------------------------------------
 RunService.RenderStepped:Connect(function(dt)
     if LocalPlayer.Character then
@@ -301,7 +301,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --------------------------------------------------
--- CHẾ ĐỘ KHẢM GIẢ / LINH HỒN TÁCH XÁC[cite: 7]
+-- CHẾ ĐỘ KHẢM GIẢ / LINH HỒN TÁCH XÁC
 --------------------------------------------------
 local freecamPart = nil
 local isFreecamActive = false
@@ -359,7 +359,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- ESP BILLBOARD GUI[cite: 7]
+-- ESP BILLBOARD GUI
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     local billboard = Instance.new("BillboardGui")
@@ -395,7 +395,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (ĐÃ FIX LỖI THANH MÁU REAL-TIME & DRAWING MOBILE)[cite: 7]
+-- ESP NGƯỜI CHƠI
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -443,7 +443,7 @@ local function setupFullPlayerESP(plr)
         healthBarBg.Visible = false; healthBarBg.Filled = true; healthBarBg.Color = Color3.fromRGB(0, 0, 0); healthBarBg.Thickness = 1
 
         local healthBar = Drawing.new("Square")
-        healthBar.Visible = false; healthBar.Filled = true; healthBar.Thickness = 0
+        healthBar.Visible = false; healthBar.Filled = true; healthBar.Thickness = 1
 
         local renderConnection
         local function cleanup()
@@ -480,7 +480,6 @@ local function setupFullPlayerESP(plr)
                     local height = math.abs(headPos.Y - legPos.Y)
                     local width = height / 1.5
 
-                    -- Dùng math.floor để ép executor vẽ lại mượt mà trên mobile, tránh kẹt/treo thanh máu
                     box.Size = Vector2.new(math.floor(width), math.floor(height))
                     box.Position = Vector2.new(math.floor(targetPos.X - width / 2), math.floor(targetPos.Y - height / 2))
                     box.Visible = true
@@ -546,7 +545,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & BÁO AN TOÀN CHUẨN XÁC[cite: 7]
+-- CẢNH BÁO QUÁI VẬT & BÁO AN TOÀN
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -671,7 +670,7 @@ Workspace.DescendantAdded:Connect(function(obj)
 end)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT[cite: 7]
+-- ANTI-AFK & FULLBRIGHT
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -707,7 +706,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN GUI MOTE HUB[cite: 7]
+-- GIAO DIỆN GUI MOTE HUB
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta300"
@@ -805,7 +804,7 @@ for i, name in ipairs(tabNames) do
 end
 
 --------------------------------------------------
--- TOGGLE VÀ SLIDER UI[cite: 7]
+-- TOGGLE VÀ SLIDER UI
 --------------------------------------------------
 local function createToggleSwitch(parent, labelText, flagName, posY, callback)
     local container = Instance.new("Frame")
@@ -897,7 +896,7 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
 end
 
 --------------------------------------------------
--- NÚT NHẢY DƯỚI ĐẤT & CỬA SỔ ĐIỀU CHỈNH BAY[cite: 7]
+-- NÚT NHẢY & ĐIỀU CHỈNH BAY
 --------------------------------------------------
 local jumpButtonUI = Instance.new("TextButton")
 jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
@@ -943,7 +942,7 @@ local function updateFlyControlVisibility()
 end
 
 --------------------------------------------------
--- NỘI DUNG CÁC TABS[cite: 7]
+-- NỘI DUNG CÁC TABS
 --------------------------------------------------
 -- TAB 1: MAIN
 createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
@@ -1035,26 +1034,34 @@ btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLangu
 btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
 --------------------------------------------------
--- MỞ / TẮT MENU (ĐÃ TỐI ƯU CHỐNG MÉO UI)[cite: 7]
+-- MỞ / TẮT MENU (ĐÃ FIX LỖI TỐI ƯU & CHỐNG TREO MOBILE)
 --------------------------------------------------
 local isMenuAnimating = false
+local currentCloseConn = nil
+local currentOpenConn = nil
+
 circleBtn.MouseButton1Click:Connect(function()
     if isMenuAnimating then return end
     isMenuAnimating = true
 
     if mainFrame.Visible then
+        if currentOpenConn then currentOpenConn:Disconnect(); currentOpenConn = nil end
         local tweenClose = TweenService:Create(mainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = UDim2.new(0, 520, 0, 0) })
         tweenClose:Play()
-        tweenClose.Completed:Connect(function() 
+        currentCloseConn = tweenClose.Completed:Connect(function() 
+            if currentCloseConn then currentCloseConn:Disconnect(); currentCloseConn = nil end
             mainFrame.Visible = false
+            mainFrame.Size = UDim2.new(0, 520, 0, 280) -- Reset kích thước chuẩn cho lần mở kế tiếp
             isMenuAnimating = false 
         end)
     else
+        if currentCloseConn then currentCloseConn:Disconnect(); currentCloseConn = nil end
         mainFrame.Size = UDim2.new(0, 520, 0, 0)
         mainFrame.Visible = true
-        local tweenOpen = TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Out), { Size = UDim2.new(0, 520, 0, 280) })
+        local tweenOpen = TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Out, Enum.EasingDirection.Quad), { Size = UDim2.new(0, 520, 0, 280) })
         tweenOpen:Play()
-        tweenOpen.Completed:Connect(function() 
+        currentOpenConn = tweenOpen.Completed:Connect(function() 
+            if currentOpenConn then currentOpenConn:Disconnect(); currentOpenConn = nil end
             isMenuAnimating = false 
         end)
     end
@@ -1065,7 +1072,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã fix hoàn tất lỗi thanh máu ESP & Tối ưu hiệu năng!",
+        Text = "Đã fix hoàn tất lỗi mở Menu & Tối ưu hóa hiệu năng!",
         Duration = 5
     })
 end)
