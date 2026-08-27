@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.00 - FIXED & CRASH-PROOF EDITION
+-- MOTE HUB BETA 3.00 - FIXED FLOOR 2 & MONSTER LOGIC
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -15,7 +15,6 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- Kiểm tra an toàn thư viện Drawing
 local HasDrawing = false
 pcall(function()
     if Drawing and typeof(Drawing.new) == "function" then
@@ -154,7 +153,7 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ & AUTO LOOT (TỐI ƯU CHỐNG LAG)
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT
 --------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
@@ -371,7 +370,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- ESP BILLBOARD GUI
+-- ESP BILLBOARD GUI (SỬA LỖI TỰ HỦY KHI NHẶT VẬT PHẨM)
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     if not targetPart then return end
@@ -395,6 +394,7 @@ local function createBillboard(targetPart, text, color, flagName)
 
     task.spawn(function()
         while targetPart and targetPart.Parent and targetPart:IsDescendantOf(Workspace) do
+            -- Kiểm tra riêng cho ESP Items để xóa ngay khi được nhặt
             if flagName == "ESPItems" then
                 local isHeld = false
                 local ancestor = targetPart.Parent
@@ -410,7 +410,10 @@ local function createBillboard(targetPart, text, color, flagName)
                     prompt = targetPart.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
                 end
                 
-                if isHeld or (prompt and not prompt.Enabled) then break end
+                -- Nếu item bị cầm trên tay hoặc prompt bị vĩnh viễn tắt/xóa -> TỰ HỦY ESP
+                if isHeld or (prompt and not prompt.Enabled) then 
+                    break 
+                end
             end
 
             if Flags[flagName] and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -427,7 +430,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (TỰ ĐỘNG CHÓNG AN TOÀN KHI THIẾU DRAWING)
+-- ESP NGƯỜI CHƠI
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -571,21 +574,101 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     end)
 end
 
+--------------------------------------------------
+-- BỘ BỘC QUÁI VẬT & MÔ HÌNH CHÍNH XÁC (SỬA TRIỆT ĐỂ LỖI)
+--------------------------------------------------
 local function processObject(obj)
     pcall(function()
-        if not obj then return end
+        if not obj or not obj.Parent then return end
 
+        -- 1. QUÉT VẬT PHẨM
         local itemLabel = getItemLabel(obj.Name)
         if itemLabel then
-            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-            if targetPart and not targetPart:FindFirstChild("Mote_ESP_ESPItems") then
-                createBillboard(targetPart, itemLabel, ESPColors.Items, "ESPItems")
+            local isHeld = false
+            local ancestor = obj.Parent
+            while ancestor and ancestor ~= Workspace do
+                if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
+                ancestor = ancestor.Parent
+            end
+
+            if not isHeld then
+                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                if targetPart and not targetPart:FindFirstChild("Mote_ESP_ESPItems") then
+                    createBillboard(targetPart, itemLabel, ESPColors.Items, "ESPItems")
+                end
             end
             return
         end
 
         local nameLower = obj.Name:lower()
 
+        -- 2. LỌC QUÁI VẬT CHÍNH XÁC (SỬA LỖI GIGGLE TRỰC TIẾP & LỖI FIGURE BÁO ẢO)
+        local monsterModel = nil
+        local detectedMonsterName = nil
+
+        if nameLower:find("giggle", 1, true) then
+            detectedMonsterName = "Giggle"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("rushmoving", 1, true) or nameLower == "rush" then
+            detectedMonsterName = "Rush"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then
+            detectedMonsterName = "Ambush"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" then
+            detectedMonsterName = "Seek"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower == "screech" then
+            detectedMonsterName = "Screech"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower == "eyes" or nameLower == "eyesmoving" then
+            -- Chặn không cho bộ phận 'Eye/Eyes' của Giggle biến thành Eyes
+            local pName = obj.Parent and obj.Parent.Name:lower() or ""
+            if not pName:find("giggle", 1, true) then
+                detectedMonsterName = "Eyes"
+                monsterModel = obj:IsA("Model") and obj or obj.Parent
+            end
+        elseif nameLower == "halt" then
+            detectedMonsterName = "Halt"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("figure", 1, true) then
+            -- CHỈ NHẬN FIGURE THỰC SỰ CÓ HUMANOID/ROOT (Lọc sạch Node/Map Dummy gây thông báo ảo mỗi lần mở cửa)
+            local potentialModel = obj:IsA("Model") and obj or obj.Parent
+            if potentialModel and (potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("Root") or potentialModel:FindFirstChildOfClass("Humanoid")) then
+                detectedMonsterName = "Figure"
+                monsterModel = potentialModel
+            end
+        elseif nameLower == "a60" or nameLower == "a-60" then
+            detectedMonsterName = "A-60"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower == "a120" or nameLower == "a-120" then
+            detectedMonsterName = "A-120"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("grumble", 1, true) then
+            detectedMonsterName = "Grumble"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("gloombat", 1, true) then
+            detectedMonsterName = "Gloombat"
+            monsterModel = obj:IsA("Model") and obj or obj.Parent
+        end
+
+        if detectedMonsterName and monsterModel then
+            -- Chỉ gắn 1 ESP duy nhất lên cấp độ Model của con quái (Sửa lỗi 1 con ra nhiều ESP)
+            if not monsterModel:FindFirstChild("Mote_ESP_ESPMonster", true) then
+                local targetPart = monsterModel:FindFirstChild("HumanoidRootPart") 
+                                or monsterModel:FindFirstChild("Root") 
+                                or (monsterModel:IsA("BasePart") and monsterModel) 
+                                or monsterModel:FindFirstChildWhichIsA("BasePart", true)
+
+                if targetPart then
+                    createBillboard(targetPart, "⚠️ " .. detectedMonsterName, ESPColors.Monster, "ESPMonster")
+                    triggerSmartMonsterNotice(monsterModel, detectedMonsterName)
+                end
+            end
+            return
+        end
+
+        -- 3. XỬ LÝ CỬA, CẦN GẠT, RƯƠNG
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
             if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
@@ -599,26 +682,6 @@ local function processObject(obj)
         if (nameLower:find("chest", 1, true) or nameLower == "lootbox") and not obj:FindFirstChild("Mote_ESP_ESPChest", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, "📦 Rương Đồ", ESPColors.Chest, "ESPChest") end
-        end
-
-        local detectedMonsterName = nil
-        if nameLower:find("rushmoving", 1, true) or nameLower == "rush" then detectedMonsterName = "Rush"
-        elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then detectedMonsterName = "Ambush"
-        elseif (nameLower:find("seekmoving", 1, true) or nameLower == "seekrig") then detectedMonsterName = "Seek"
-        elseif nameLower == "screech" then detectedMonsterName = "Screech"
-        elseif nameLower == "eyes" then detectedMonsterName = "Eyes"
-        elseif nameLower == "halt" then detectedMonsterName = "Halt"
-        elseif nameLower:find("figure", 1, true) then detectedMonsterName = "Figure"
-        elseif nameLower == "a60" or nameLower == "a-60" then detectedMonsterName = "A-60"
-        elseif nameLower == "a120" or nameLower == "a-120" then detectedMonsterName = "A-120"
-        end
-
-        if detectedMonsterName then
-            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart and not obj:FindFirstChild("Mote_ESP_ESPMonster", true) then
-                createBillboard(targetPart, "⚠️ " .. detectedMonsterName, ESPColors.Monster, "ESPMonster")
-            end
-            triggerSmartMonsterNotice(obj, detectedMonsterName)
         end
     end)
 end
@@ -1020,7 +1083,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã khởi chạy thành công!",
+        Text = "Đã sửa thành công toàn bộ lỗi Floor 2!",
         Duration = 4
     })
 end)
