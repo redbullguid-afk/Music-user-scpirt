@@ -1,4 +1,3 @@
-
 -- ==================================================
 -- MOTE HUB BETA 3.00 - FIXED UI & PERFORMANCE OPTIMIZED
 -- ==================================================
@@ -116,7 +115,7 @@ local function getItemLabel(name)
 end
 
 --------------------------------------------------
--- HỆ THỐNG FONT SIZE REAL-TIME
+-- HỆ THỐNG FONT SIZE REAL-TIME (TỐI ƯU CHỐNG TRÀN)
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
@@ -396,7 +395,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- ESP NGƯỜI CHƠI (ĐÃ SỬA LỖI MEMORY LEAK DRAWING)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -405,8 +404,7 @@ local function setupFullPlayerESP(plr)
         if not char then return end
         local hrp = char:WaitForChild("HumanoidRootPart", 5)
         local head = char:WaitForChild("Head", 5)
-        local humanoid = char:WaitForChild("Humanoid", 5)
-        if not hrp or not head or not humanoid then return end
+        if not hrp or not head then return end
 
         local hl = char:FindFirstChild("Mote_Player_Highlight") or Instance.new("Highlight")
         hl.Name = "Mote_Player_Highlight"
@@ -467,6 +465,7 @@ local function setupFullPlayerESP(plr)
                 hl.Enabled = true; bb.Enabled = true
                 local localChar = LocalPlayer.Character
                 local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
+                local targetHum = char:FindFirstChildOfClass("Humanoid")
 
                 if localHrp then
                     local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
@@ -481,36 +480,29 @@ local function setupFullPlayerESP(plr)
                     local height = math.abs(headPos.Y - legPos.Y)
                     local width = height / 1.5
 
-                    box.Size = Vector2.new(math.floor(width), math.floor(height))
-                    box.Position = Vector2.new(math.floor(targetPos.X - width / 2), math.floor(targetPos.Y - height / 2))
+                    box.Size = Vector2.new(width, height)
+                    box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    local currentHealth = humanoid.Health
-                    local maxHealth = humanoid.MaxHealth
-
-                    if maxHealth > 0 then
-                        local hpPercent = math.clamp(currentHealth / maxHealth, 0, 1)
+                    if targetHum and targetHum.MaxHealth > 0 then
+                        local hpPercent = math.clamp(targetHum.Health / targetHum.MaxHealth, 0, 1)
                         local barWidth = 4
-                        local barX = math.floor((targetPos.X - width / 2) - barWidth - 4)
-                        local barY = math.floor(targetPos.Y - height / 2)
+                        local barX = (targetPos.X - width / 2) - barWidth - 4
+                        local barY = targetPos.Y - height / 2
 
-                        healthBarBg.Size = Vector2.new(barWidth, math.floor(height))
+                        healthBarBg.Size = Vector2.new(barWidth, height)
                         healthBarBg.Position = Vector2.new(barX, barY)
                         healthBarBg.Visible = true
 
-                        local fillHeight = math.floor(height * hpPercent)
-                        if fillHeight > 0 then
-                            healthBar.Size = Vector2.new(barWidth, fillHeight)
-                            healthBar.Position = Vector2.new(barX, math.floor(barY + (height - fillHeight)))
+                        local fillHeight = height * hpPercent
+                        healthBar.Size = Vector2.new(barWidth, fillHeight)
+                        healthBar.Position = Vector2.new(barX, barY + (height - fillHeight))
 
-                            if hpPercent >= 0.75 then healthBar.Color = Color3.fromRGB(0, 255, 0)
-                            elseif hpPercent >= 0.40 then healthBar.Color = Color3.fromRGB(255, 255, 0)
-                            elseif hpPercent >= 0.20 then healthBar.Color = Color3.fromRGB(255, 140, 0)
-                            else healthBar.Color = Color3.fromRGB(255, 0, 0) end
-                            healthBar.Visible = true
-                        else
-                            healthBar.Visible = false
-                        end
+                        if hpPercent >= 0.75 then healthBar.Color = Color3.fromRGB(0, 255, 0)
+                        elseif hpPercent >= 0.40 then healthBar.Color = Color3.fromRGB(255, 255, 0)
+                        elseif hpPercent >= 0.20 then healthBar.Color = Color3.fromRGB(255, 140, 0)
+                        else healthBar.Color = Color3.fromRGB(255, 0, 0) end
+                        healthBar.Visible = true
                     else
                         healthBarBg.Visible = false; healthBar.Visible = false
                     end
@@ -518,15 +510,15 @@ local function setupFullPlayerESP(plr)
                     local startScreenPos = nil
                     if isFreecamActive and freecamPart then
                         local startPos3D, startOnScreen = Camera:WorldToViewportPoint(freecamPart.Position)
-                        if startOnScreen then startScreenPos = Vector2.new(math.floor(startPos3D.X), math.floor(startPos3D.Y)) end
+                        if startOnScreen then startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y) end
                     elseif localHrp then
                         local startPos3D, startOnScreen = Camera:WorldToViewportPoint(localHrp.Position)
-                        if startOnScreen then startScreenPos = Vector2.new(math.floor(startPos3D.X), math.floor(startPos3D.Y)) end
+                        if startOnScreen then startScreenPos = Vector2.new(startPos3D.X, startPos3D.Y) end
                     end
 
                     if startScreenPos then
                         line.From = startScreenPos
-                        line.To = Vector2.new(math.floor(targetPos.X), math.floor(targetPos.Y))
+                        line.To = Vector2.new(targetPos.X, targetPos.Y)
                         line.Visible = true
                     else line.Visible = false end
                 else
@@ -741,7 +733,7 @@ local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1,
 local btnStroke = Instance.new("UIStroke"); btnStroke.Color = Themes.YellowBlack.Accent; btnStroke.Thickness = 2; btnStroke.Parent = circleBtn
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 520, 0, 280); mainFrame.Position = UDim2.new(0.25, 0, 0.3, 0); mainFrame.AnchorPoint = Vector2.new(0.5, 0.5); mainFrame.BackgroundColor3 = Themes.YellowBlack.FrameBg; mainFrame.BorderSizePixel = 0; mainFrame.Visible = false; mainFrame.ClipsDescendants = false; mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 520, 0, 280); mainFrame.Position = UDim2.new(0.25, 0, 0.3, 0); mainFrame.AnchorPoint = Vector2.new(0.5, 0.5); mainFrame.BackgroundColor3 = Themes.YellowBlack.FrameBg; mainFrame.BorderSizePixel = 0; mainFrame.Visible = false; mainFrame.ClipsDescendants = true; mainFrame.Parent = screenGui
 makeDraggable(mainFrame)
 
 local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.new(0, 10); frameCorner.Parent = mainFrame
@@ -945,11 +937,13 @@ end
 --------------------------------------------------
 -- NỘI DUNG CÁC TABS
 --------------------------------------------------
+-- TAB 1: MAIN
 createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
 createToggleSwitch(pages[1], Translations[Flags.Language].MonsterNotify, "MonsterNotify", 40)
 createToggleSwitch(pages[1], Translations[Flags.Language].Fullbright, "SmartFullbright", 75)
 createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 110, function(val) Flags.FullbrightIntensity = val end)
 
+-- TAB 2: ESP
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
 createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Floor 1 & 2 Items)", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Floor 2)", "ESPMonster", 75)
@@ -957,9 +951,11 @@ createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 1
 createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
 createToggleSwitch(pages[2], "🟠 ESP Người Chơi", "ESPPlayer", 180)
 
+-- TAB 3: AUTOMATION
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDrawers, "AutoDrawersLoot", 5)
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDoorKey, "AutoKeyDoor", 40)
 
+-- TAB 4: THỬ NGHIỆM
 createToggleSwitch(pages[4], Translations[Flags.Language].NoClip, "NoClip", 5)
 createToggleSwitch(pages[4], Translations[Flags.Language].Jump, "DoorsJump", 40, function(st) jumpButtonUI.Visible = st end)
 createToggleSwitch(pages[4], Translations[Flags.Language].Speed, "SpeedHack", 75)
@@ -973,6 +969,7 @@ createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet"
     updateFlyControlVisibility()
 end)
 
+-- TAB 5: SETTINGS & INFO
 local themeLbl = Instance.new("TextLabel")
 themeLbl.Size = UDim2.new(0.96, 0, 0, 20); themeLbl.Position = UDim2.new(0.02, 0, 0, 5); themeLbl.BackgroundTransparency = 1; themeLbl.Text = Translations[Flags.Language].ThemeTitle; themeLbl.Font = Enum.Font.SourceSansBold; themeLbl.TextColor3 = Color3.fromRGB(255, 255, 255); themeLbl.TextXAlignment = Enum.TextXAlignment.Left; themeLbl.Parent = pages[5]
 registerTextLabel(themeLbl)
@@ -1030,7 +1027,7 @@ btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLangu
 btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
 --------------------------------------------------
--- MỞ / TẮT MENU (ĐÃ SỬA LỖI KẸT HIỆN THANH VÀNG)
+-- MỞ / TẮT MENU (ĐÃ TỐI ƯU CHỐNG MÉO UI)
 --------------------------------------------------
 local isMenuAnimating = false
 circleBtn.MouseButton1Click:Connect(function()
@@ -1042,7 +1039,6 @@ circleBtn.MouseButton1Click:Connect(function()
         tweenClose:Play()
         tweenClose.Completed:Connect(function() 
             mainFrame.Visible = false
-            mainFrame.Size = UDim2.new(0, 520, 0, 280) -- Khôi phục lại size chuẩn để lần mở sau không bị kẹt
             isMenuAnimating = false 
         end)
     else
@@ -1061,7 +1057,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã fix lỗi mở menu hiện thanh vàng & Tối ưu hiệu năng!",
+        Text = "Đã fix hoàn tất lỗi UI & Tối ưu hiệu năng!",
         Duration = 5
     })
 end)
