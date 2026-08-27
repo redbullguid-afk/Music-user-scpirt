@@ -1,3 +1,4 @@
+
 -- ==================================================
 -- MOTE HUB BETA 2.92 - FULL FIXED & ESP UPDATED
 -- ==================================================
@@ -497,13 +498,14 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- TẠO GIAO DIỆN MENU MOTE HUB
+-- TẠO GIAO DIỆN MENU MOTE HUB (GIỮ NGUYÊN MENU BAN ĐẦU)
 --------------------------------------------------
+if CoreGui:FindFirstChild("MoteHubGUI") then CoreGui.MoteHubGUI:Destroy() end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MoteHubGUI"
 ScreenGui.ResetOnSpawn = false
-pcall(function() ScreenGui.Parent = CoreGui end)
-if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
