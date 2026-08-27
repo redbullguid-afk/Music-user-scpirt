@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.92 - FREECAM FIXED & TRACER ESP (UPDATED FLOOR 2 ITEMS)
+-- MOTE HUB BETA 2.92 - FULL FIXED & ESP UPDATED
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -80,29 +80,20 @@ local Translations = {
 }
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (CẬP NHẬT THÊM FLOOR 2 DOORS)
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (BẢO GỒM FLOOR 1 & FLOOR 2)
 --------------------------------------------------
 local ImportantItems = {
-    -- Chìa khóa & Đồ Floor 1
     ["KeyObtain"] = "🔑 Chìa Khóa", ["Key"] = "🔑 Chìa Khóa", ["MasterKey"] = "🔑 Chìa Khóa Master",
     ["SkeletonKey"] = "💀 Chìa Khóa Đầu Lâu", ["Flashlight"] = "🔦 Đèn Pin", ["Candle"] = "🕯️ Nến",
     ["Crucifix"] = "✝️ Cây Thánh Giá", ["Lockpick"] = "🗝️ Lockpick", ["Bandage"] = "🩹 Băng Gạc",
     ["Vitamins"] = "💊 Vitamin", ["Battery"] = "🔋 Pin", ["LiveHintBook"] = "📘 Sách",
     ["Gold"] = "💰 Tiền Gold", ["Coin"] = "🪙 Tiền Xu",
 
-    -- Đồ vật giải đố Floor 2 (The Mines)
+    -- Vật phẩm giải đố Floor 2 (The Mines)
     ["Fuse"] = "🔋 Cầu Chì Generator", ["FuseInPlainSight"] = "🔋 Cầu Chì", ["GeneratorFuse"] = "🔋 Cầu Chì Generator",
     ["Anchor"] = "⚓ Trạm Neo Anchor", ["AnchorPoint"] = "⚓ Trạm Neo Anchor",
     ["BreakerPole"] = "🎛️ Cầu Dao Điện", ["BreakerSwitch"] = "🎛️ Công Tắc Điện", ["Switch"] = "🎛️ Công Tắc",
     ["Shears"] = "✂️ Kéo Tỉa Vương", ["Glowstick"] = "🪔 Thanh Phát Sáng", ["Straplight"] = "🔦 Đèn Đeo Ngực", ["Bulklight"] = "🔦 Đèn Pin Lớn"
-}
-
-local MonsterAdvice = {
-    ["Rush"] = "Trốn vô tủ mau!", ["Ambush"] = "Trốn vô tủ mau!", ["Seek"] = "Chuẩn bị chạy trốn Seek!",
-    ["Screech"] = "Xoay người nhìn nó ngay!", ["Eyes"] = "Không nhìn vào nó!", ["Halt"] = "Chú ý đổi hướng di chuyển!",
-    ["Figure"] = "Đi cúi người (Crouch), giữ khoảng cách!", ["Hide"] = "Rời khỏi tủ ngay!", ["Jack"] = "Chờ 1 chút rồi mở lại tủ!",
-    ["Timothy"] = "Nhện giật mình trong hộc bàn!", ["Dread"] = "Mở cửa tiến lên phía trước mau!", ["A-60"] = "Trốn vô tủ ngay!", ["A-120"] = "Trốn vô tủ ngay!",
-    ["Giggle"] = "Cẩn thận rớt từ trần nhà!", ["Grumble"] = "Tránh xa tiếng bước chân lớn!", ["Gloombats"] = "Tắt nguồn sáng ngay!"
 }
 
 --------------------------------------------------
@@ -380,7 +371,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- TỰ ĐỘNG QUÉT ESP VẬT THỂ & ĐỒ DÙNG (BAO GỒM CẦU CHÌ, ANCHOR FLOOR 2)
+-- TỰ ĐỘNG QUÉT ESP VẬT THỂ & ĐỒ DÙNG
 --------------------------------------------------
 local scannedESPObjects = {}
 local function scanESPObjects()
@@ -407,7 +398,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (HIỂN THỊ MÁU DẠNG 16/199)
+-- ESP NGƯỜI CHƠI (CẬP NHẬT: HIỂN THỊ MÁU CHÍNH XÁC 16/199)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -504,3 +495,78 @@ end
 
 for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
+
+--------------------------------------------------
+-- TẠO GIAO DIỆN MENU MOTE HUB
+--------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MoteHubGUI"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 360, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -130)
+MainFrame.BackgroundColor3 = Themes[Flags.Theme].FrameBg
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Themes[Flags.Theme].HeaderBg
+Header.Parent = MainFrame
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 8)
+HeaderCorner.Parent = Header
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "MOTE HUB BETA 2.92"
+Title.TextColor3 = Themes[Flags.Theme].Accent
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
+
+registerTextLabel(Title)
+
+--------------------------------------------------
+-- NÚT BẬT / TẮT MENU CHO ĐIỆN THOẠI (TOGGLE BUTTON)
+--------------------------------------------------
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "MoteHub_ToggleButton"
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.2, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+ToggleBtn.Text = "MOTE"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 215, 0)
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.TextSize = 14
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(1, 0)
+ToggleCorner.Parent = ToggleBtn
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+StarterGui:SetCore("SendNotification", {
+    Title = "Mote Hub 2.92",
+    Text = "Đã sửa xong toàn bộ Script & ESP!",
+    Duration = 5
+})
