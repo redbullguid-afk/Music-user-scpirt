@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.00 - ULTIMATE AUTO-REMOVE ESP ITEMS
+-- MOTE HUB BETA 3.00 - ULTIMATE AUTO-REMOVE ESP ITEMS (FLOOR 2 FIXED)
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -95,7 +95,7 @@ local ImportantItems = {
     ["skeletonkey"] = "💀 Chìa Khóa Đầu Lâu", ["flashlight"] = "🔦 Đèn Pin", ["candle"] = "🕯️ Nến",
     ["crucifix"] = "✝️ Cây Thánh Giá", ["lockpick"] = "🗝️ Lockpick", ["bandage"] = "🩹 Băng Gạc",
     ["vitamins"] = "💊 Vitamin", ["battery"] = "🔋 Pin", ["livehintbook"] = "📘 Sách",
-    ["fuseinplainsight"] = "🔋 Cầu Chì", ["fuse"] = "🔋 Cầu Chì",
+    ["fuseinplainsight"] = "🔋 Cầu Chì", ["fuse"] = "🔋 Cầu Chì", ["fuseobtain"] = "🔋 Cầu Chì", ["breakerfuse"] = "🔋 Cầu Chì", 
     ["glowstick"] = "💡 Que Phát Sáng", ["shears"] = "✂️ Kéo Cắt Cây", ["starlight"] = "🌟 Bình Starlight",
     ["bandagepack"] = "🩹 Hộp Băng Gạc", ["batterypack"] = "🔋 Hộp Pin", ["bulklight"] = "🔦 Đèn Pin Công Nghiệp",
     ["laserpointer"] = "🔴 Đèn Laser", ["alarmclock"] = "⏰ Đồng Hồ Báo Thức", ["compass"] = "🧭 La Bàn",
@@ -370,6 +370,33 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
+-- HÀM TÌM PROXIMITY PROMPT AN TOÀN (SỬA LỖI FLOOR 2)
+--------------------------------------------------
+local function getObjectPrompt(targetPart)
+    if not targetPart then return nil end
+    
+    local prompt = targetPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then return prompt end
+    
+    if targetPart.Parent and targetPart.Parent ~= Workspace then
+        prompt = targetPart.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if prompt then return prompt end
+        
+        local ancestor = targetPart.Parent.Parent
+        while ancestor and ancestor ~= Workspace do
+            if ancestor:IsA("Model") then
+                -- Ngăn không lấy nhầm Prompt của cả căn phòng
+                if ancestor.Name:lower():find("room") then break end
+                prompt = ancestor:FindFirstChildWhichIsA("ProximityPrompt", true)
+                if prompt then return prompt end
+            end
+            ancestor = ancestor.Parent
+        end
+    end
+    return nil
+end
+
+--------------------------------------------------
 -- BỘ KIỂM TRẠNG THÁI TRUY VẤN VẬT PHẨM TOÀN DIỆN
 --------------------------------------------------
 local function isItemValidAndUncollected(targetPart)
@@ -386,12 +413,11 @@ local function isItemValidAndUncollected(targetPart)
         current = current.Parent
     end
 
-    -- 2. Kiểm tra ProximityPrompt trong Model/Part vật phẩm
-    local itemModel = targetPart:FindFirstAncestorOfClass("Model") or targetPart.Parent or targetPart
-    local prompt = itemModel:FindFirstChildWhichIsA("ProximityPrompt", true)
+    -- 2. Kiểm tra ProximityPrompt một cách an toàn
+    local prompt = getObjectPrompt(targetPart)
 
-    -- Nếu ProximityPrompt bị hủy hoàn toàn hoặc bị khóa (Enabled = false) -> Đã nhặt
-    if not prompt or not prompt.Enabled then
+    -- Nếu có ProximityPrompt và nó bị khóa (Enabled = false) -> Đã nhặt
+    if prompt and not prompt.Enabled then
         return false
     end
 
@@ -433,10 +459,7 @@ local function createBillboard(targetPart, text, color, flagName)
     end
 
     if flagName == "ESPItems" then
-        local itemModel = targetPart:FindFirstAncestorOfClass("Model") or targetPart.Parent or targetPart
-        
-        -- Lắng nghe khi có người dùng (Bạn hoặc Đồng đội) kích hoạt nút E thành công
-        local prompt = itemModel:FindFirstChildWhichIsA("ProximityPrompt", true)
+        local prompt = getObjectPrompt(targetPart)
         if prompt then
             table.insert(connections, prompt.Triggered:Connect(function()
                 task.wait(0.05)
@@ -1130,7 +1153,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã tối ưu xóa ESP tức thì khi Đồng đội/Bản thân nhặt!",
+        Text = "Đã sửa lỗi hiển thị ESP Cầu chì Floor 2 (Safe Detection)!",
         Duration = 4
     })
 end)
