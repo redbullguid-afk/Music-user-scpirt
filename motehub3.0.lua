@@ -241,7 +241,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK & NOCLIP (ĐÃ NÂNG CẤP ANTI-CHEAT)
+-- TÍNH NĂNG SPEED HACK & NOCLIP (ĐÃ FIX GIẬT VỀ KHI CHẠY LÂU)
 --------------------------------------------------
 
 -- Đưa NoClip vào Stepped (chạy trước khi tính toán vật lý) để tránh bị kẹt hoặc giật tường
@@ -255,32 +255,38 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Đưa SpeedHack và Anti-Rubberband vào Heartbeat (chạy sau vật lý) để qua mặt máy chủ
+-- Đưa SpeedHack và Anti-Rubberband vào Heartbeat với cơ chế đồng bộ tốc độ động
 RunService.Heartbeat:Connect(function(dt)
     if LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         
         if hrp and humanoid and humanoid.Health > 0 then
-            if Flags.SpeedHack and humanoid.MoveDirection.Magnitude > 0 then
-                local extraMultiplier = Flags.SpeedMultiplier - 1
-                if extraMultiplier > 0 then
-                    -- Lấy WalkSpeed chuẩn của Server hiện tại để tính toán thay vì hardcode
-                    local baseSpeed = humanoid.WalkSpeed > 0 and humanoid.WalkSpeed or 16
-                    local moveDelta = humanoid.MoveDirection * (baseSpeed * extraMultiplier) * dt
-                    
-                    hrp.CFrame = hrp.CFrame + moveDelta
-                    
-                    -- Chống Giật (Bypass Anti-cheat Vận Tốc)
-                    if Flags.AntiRubberband then
-                        local safeVel = humanoid.MoveDirection * baseSpeed
-                        -- Ghi đè Velocity ở mức an toàn khớp với Server, không tác động tới trục Y (trọng lực rơi/nhảy)
-                        hrp.AssemblyLinearVelocity = Vector3.new(
-                            safeVel.X,
-                            hrp.AssemblyLinearVelocity.Y,
-                            safeVel.Z
-                        )
+            if Flags.SpeedHack then
+                local baseSpeed = 16
+                local targetSpeed = baseSpeed * Flags.SpeedMultiplier
+                humanoid.WalkSpeed = targetSpeed
+                
+                if humanoid.MoveDirection.Magnitude > 0 then
+                    local extraMultiplier = Flags.SpeedMultiplier - 1
+                    if extraMultiplier > 0 then
+                        local moveDelta = humanoid.MoveDirection * (baseSpeed * extraMultiplier) * dt
+                        hrp.CFrame = hrp.CFrame + moveDelta
+                        
+                        -- Chống giật về (Anti-Rubberband) bằng cách đồng bộ vận tốc thực tế với server
+                        if Flags.AntiRubberband then
+                            local targetVel = humanoid.MoveDirection * targetSpeed
+                            hrp.AssemblyLinearVelocity = Vector3.new(
+                                targetVel.X,
+                                hrp.AssemblyLinearVelocity.Y,
+                                targetVel.Z
+                            )
+                        end
                     end
+                end
+            else
+                if humanoid.WalkSpeed > 16 and humanoid.WalkSpeed <= 160 then
+                    humanoid.WalkSpeed = 16
                 end
             end
         end
@@ -380,7 +386,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- HÀM TÌM PROXIMITY PROMPT AN TOÀN (SỬA LỖI FLOOR 2)
+-- HÀM TÌM PROXIMITY PROMPT AN TOÀN
 --------------------------------------------------
 local function getObjectPrompt(targetPart)
     if not targetPart then return nil end
@@ -406,7 +412,7 @@ local function getObjectPrompt(targetPart)
 end
 
 --------------------------------------------------
--- BỘ KIỂM TRẠNG THÁI TRUY VẤN VẬT PHẨM TOÀN DIỆN
+-- BỘ KIỂM TRA TRẠNG THÁI VẬT PHẨM (ĐÃ CHO PHÉP QUÉT TRONG TỦ / RƯỞNG ĐÓNG)
 --------------------------------------------------
 local function isItemValidAndUncollected(targetPart)
     if not targetPart or not targetPart.Parent or not targetPart:IsDescendantOf(Workspace) then
@@ -421,8 +427,9 @@ local function isItemValidAndUncollected(targetPart)
         current = current.Parent
     end
 
+    -- Đã loại bỏ ràng buộc prompt.Enabled để quét được vật phẩm bên trong tủ, ngăn tủ, rương khi chưa mở
     local prompt = getObjectPrompt(targetPart)
-    if prompt and not prompt.Enabled then
+    if prompt and prompt.Parent == nil then
         return false
     end
 
@@ -505,7 +512,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (ĐÃ ĐƯỢC FIX LỖI)
+-- ESP NGƯỜI CHƠI
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -663,13 +670,20 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
 end
 
 --------------------------------------------------
--- BỘ BỘC QUÁI VẬT & MÔ HÌNH CHÍNH XÁC
+-- BỘ QUÉT VẬT THỂ & MÔ HÌNH CHÍNH XÁC (HỖ TRỢ QUÉT TỦ, RƯƠNG)
 --------------------------------------------------
 local function processObject(obj)
     pcall(function()
         if not obj or not obj.Parent then return end
 
         local itemLabel = getItemLabel(obj.Name)
+        if not itemLabel and obj.Parent then
+            itemLabel = getItemLabel(obj.Parent.Name)
+        end
+        if not itemLabel and obj.Parent and obj.Parent.Parent then
+            itemLabel = getItemLabel(obj.Parent.Parent.Name)
+        end
+
         if itemLabel then
             local isHeld = false
             local ancestor = obj.Parent
@@ -680,6 +694,9 @@ local function processObject(obj)
 
             if not isHeld then
                 local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                if not targetPart and obj.Parent and obj.Parent:IsA("BasePart") then
+                    targetPart = obj.Parent
+                end
                 if targetPart and not targetPart:FindFirstChild("Mote_ESP_ESPItems") then
                     createBillboard(targetPart, itemLabel, ESPColors.Items, "ESPItems")
                 end
@@ -1164,7 +1181,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.00",
-        Text = "Đã sửa lỗi hiển thị ESP Cầu chì Floor 2 (Safe Detection)!",
+        Text = "Đã fix lỗi Speedhack giật về lâu dài & Quét ESP vật phẩm trong tủ/rương!",
         Duration = 4
     })
 end)
