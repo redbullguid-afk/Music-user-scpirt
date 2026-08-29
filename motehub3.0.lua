@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.00 - ULTIMATE AUTO-REMOVE ESP ITEMS (FLOOR 2 FIXED)
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -83,8 +83,8 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.00 (Safe Detection)" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.00 (Safe Detection)" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối (Fix Hant)", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.01 (Optimized)" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright (Hant Fix)", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.01 (Optimized)" }
 }
 
 --------------------------------------------------
@@ -114,11 +114,39 @@ local function getItemLabel(name)
     if not name or name == "" then return nil end
     local lowerName = name:lower()
     for key, label in pairs(ImportantItems) do
-        if lowerName:find(key, 1, true) then
+        if lowerName == key or lowerName:find(key, 1, true) then
             return label
         end
     end
     return nil
+end
+
+-- Kiểm tra xem vật thể có phải là tủ, rương, cửa hoặc vật chứa không (để tránh nhầm lẫn cho chìa khóa)
+local function isContainerOrLocker(obj)
+    local current = obj
+    while current and current ~= Workspace do
+        local n = current.Name:lower()
+        if n:find("drawer") or n:find("chest") or n:find("lootbox") or n:find("locker") or n:find("cabinet") or n:find("wardrobe") or n:find("door") or n:find("lock") or n:find("shelf") or n:find("table") then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
+-- Kiểm tra xem xung quanh (trong phạm vi 3 studs) đã có ESP vật phẩm này chưa để tránh spam quá nhiều ESP[cite: 3]
+local function isTooCloseToExistingItemESP(pos)
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BillboardGui") and obj.Name:find("Mote_ESP_ESPItems") then
+            local ad = obj.Adornee
+            if ad and ad:IsA("BasePart") then
+                if (ad.Position - pos).Magnitude <= 3 then
+                    return true
+                end
+            end
+        end
+    end
+    return false
 end
 
 --------------------------------------------------
@@ -241,10 +269,8 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK & NOCLIP (ĐÃ FIX GIẬT VỀ KHI CHẠY LÂU)
+-- TÍNH NĂNG SPEED HACK & NOCLIP (ĐÃ FIX GIẬT VỀ)
 --------------------------------------------------
-
--- Đưa NoClip vào Stepped (chạy trước khi tính toán vật lý) để tránh bị kẹt hoặc giật tường
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
@@ -255,7 +281,6 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Đưa SpeedHack và Anti-Rubberband vào Heartbeat với cơ chế đồng bộ tốc độ động
 RunService.Heartbeat:Connect(function(dt)
     if LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -273,7 +298,6 @@ RunService.Heartbeat:Connect(function(dt)
                         local moveDelta = humanoid.MoveDirection * (baseSpeed * extraMultiplier) * dt
                         hrp.CFrame = hrp.CFrame + moveDelta
                         
-                        -- Chống giật về (Anti-Rubberband) bằng cách đồng bộ vận tốc thực tế với server
                         if Flags.AntiRubberband then
                             local targetVel = humanoid.MoveDirection * targetSpeed
                             hrp.AssemblyLinearVelocity = Vector3.new(
@@ -411,9 +435,6 @@ local function getObjectPrompt(targetPart)
     return nil
 end
 
---------------------------------------------------
--- BỘ KIỂM TRA TRẠNG THÁI VẬT PHẨM (ĐÃ CHO PHÉP QUÉT TRONG TỦ / RƯỞNG ĐÓNG)
---------------------------------------------------
 local function isItemValidAndUncollected(targetPart)
     if not targetPart or not targetPart.Parent or not targetPart:IsDescendantOf(Workspace) then
         return false
@@ -427,7 +448,6 @@ local function isItemValidAndUncollected(targetPart)
         current = current.Parent
     end
 
-    -- Đã loại bỏ ràng buộc prompt.Enabled để quét được vật phẩm bên trong tủ, ngăn tủ, rương khi chưa mở
     local prompt = getObjectPrompt(targetPart)
     if prompt and prompt.Parent == nil then
         return false
@@ -437,7 +457,7 @@ local function isItemValidAndUncollected(targetPart)
 end
 
 --------------------------------------------------
--- ESP BILLBOARD GUI (LẮNG NGHE SỰ KIỆN ĐỒNG ĐỘI & BẤM E)
+-- ESP BILLBOARD GUI
 --------------------------------------------------
 local function createBillboard(targetPart, text, color, flagName)
     if not targetPart then return end
@@ -575,7 +595,6 @@ local function setupFullPlayerESP(plr)
                 hl.Enabled = true; bb.Enabled = true
                 local localChar = LocalPlayer.Character
                 local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
-
                 local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
 
                 if localHrp then
@@ -670,41 +689,14 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
 end
 
 --------------------------------------------------
--- BỘ QUÉT VẬT THỂ & MÔ HÌNH CHÍNH XÁC (HỖ TRỢ QUÉT TỦ, RƯƠNG)
+-- BỘ QUÉT VẬT THỂ & MÔ HÌNH (ĐÃ TỐI ƯU & FIX LỖI NHẬN DIỆN NHẦM)
 --------------------------------------------------
 local function processObject(obj)
     pcall(function()
         if not obj or not obj.Parent then return end
-
-        local itemLabel = getItemLabel(obj.Name)
-        if not itemLabel and obj.Parent then
-            itemLabel = getItemLabel(obj.Parent.Name)
-        end
-        if not itemLabel and obj.Parent and obj.Parent.Parent then
-            itemLabel = getItemLabel(obj.Parent.Parent.Name)
-        end
-
-        if itemLabel then
-            local isHeld = false
-            local ancestor = obj.Parent
-            while ancestor and ancestor ~= Workspace do
-                if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
-                ancestor = ancestor.Parent
-            end
-
-            if not isHeld then
-                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                if not targetPart and obj.Parent and obj.Parent:IsA("BasePart") then
-                    targetPart = obj.Parent
-                end
-                if targetPart and not targetPart:FindFirstChild("Mote_ESP_ESPItems") then
-                    createBillboard(targetPart, itemLabel, ESPColors.Items, "ESPItems")
-                end
-            end
-            return
-        end
-
         local nameLower = obj.Name:lower()
+
+        -- 1. ƯU TIÊN KIỂM TRA QUÁI VẬT TRƯỚC (Tuyệt đối không bị nhầm lẫn với vật phẩm như Cây Thánh Giá)[cite: 3]
         local monsterModel = nil
         local detectedMonsterName = nil
 
@@ -767,6 +759,40 @@ local function processObject(obj)
             return
         end
 
+        -- 2. XỬ LÝ VẬT PHẨM (Loại bỏ tủ/rương và tránh trùng lặp trong bán kính 3 studs)[cite: 3]
+        if not isContainerOrLocker(obj) then
+            local itemLabel = getItemLabel(obj.Name)
+            if not itemLabel and obj.Parent then
+                itemLabel = getItemLabel(obj.Parent.Name)
+            end
+            if not itemLabel and obj.Parent and obj.Parent.Parent then
+                itemLabel = getItemLabel(obj.Parent.Parent.Name)
+            end
+
+            if itemLabel then
+                local isHeld = false
+                local ancestor = obj.Parent
+                while ancestor and ancestor ~= Workspace do
+                    if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
+                    ancestor = ancestor.Parent
+                end
+
+                if not isHeld then
+                    local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if not targetPart and obj.Parent and obj.Parent:IsA("BasePart") then
+                        targetPart = obj.Parent
+                    end
+                    if targetPart and not targetPart:FindFirstChild("Mote_ESP_ESPItems") then
+                        if not isTooCloseToExistingItemESP(targetPart.Position) then
+                            createBillboard(targetPart, itemLabel, ESPColors.Items, "ESPItems")
+                        end
+                    end
+                end
+                return
+            end
+        end
+
+        -- 3. XỬ LÝ CỬA, CẦN GẠT, RƯƠNG
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
             if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
@@ -792,7 +818,7 @@ end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT
+-- ANTI-AFK & FULLBRIGHT (ĐÃ FIX XÓA HIỆU ỨNG HANT / HALT)
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -802,16 +828,25 @@ end)
 
 local isFullbrightApplied = false
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.3) do
         if Flags.SmartFullbright then
             pcall(function()
                 local val = (Flags.FullbrightIntensity / 100) * 2
                 Lighting.Brightness = math.max(0.5, val)
-                Lighting.ClockTime = 14; Lighting.FogEnd = 1000000; Lighting.GlobalShadows = false
+                Lighting.ClockTime = 14
+                Lighting.FogEnd = 1000000
+                Lighting.GlobalShadows = false
                 local ambValue = math.floor((Flags.FullbrightIntensity / 100) * 255)
                 Lighting.Ambient = Color3.fromRGB(ambValue, ambValue, ambValue)
                 Lighting.OutdoorAmbient = Color3.fromRGB(ambValue, ambValue, ambValue)
                 isFullbrightApplied = true
+
+                -- Xóa hoặc vô hiệu hóa các hiệu ứng làm mờ/tối màn hình (ví dụ hiệu ứng tấn công của con Halt/Hant)
+                for _, child in ipairs(Lighting:GetChildren()) do
+                    if child:IsA("BlurEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("Atmosphere") or child:IsA("DepthOfFieldEffect") then
+                        child.Enabled = false
+                    end
+                end
             end)
         elseif isFullbrightApplied then
             isFullbrightApplied = false
@@ -822,6 +857,11 @@ task.spawn(function()
                 Lighting.GlobalShadows = OriginalLighting.GlobalShadows
                 Lighting.Ambient = OriginalLighting.Ambient
                 Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+                for _, child in ipairs(Lighting:GetChildren()) do
+                    if child:IsA("BlurEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("Atmosphere") then
+                        child.Enabled = true
+                    end
+                end
             end)
         end
     end
@@ -831,7 +871,7 @@ end)
 -- GIAO DIỆN GUI MOTE HUB
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta300"
+screenGui.Name = "MoteHub_Beta301"
 screenGui.ResetOnSpawn = false
 
 pcall(function()
@@ -876,7 +916,7 @@ local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.ne
 local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 3.00"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 3.01"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
 local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
 local tabNav = Instance.new("Frame")
@@ -1180,8 +1220,8 @@ applyTheme()
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "MOTE HUB BETA 3.00",
-        Text = "Đã fix lỗi Speedhack giật về lâu dài & Quét ESP vật phẩm trong tủ/rương!",
+        Title = "MOTE HUB BETA 3.01",
+        Text = "Đã tối ưu ESP vật phẩm (lọc 3 studs, fix chìa khóa) & Fix lỗi Fullbright xóa hiệu ứng Halt!",
         Duration = 4
     })
 end)
