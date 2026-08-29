@@ -241,9 +241,22 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK & NOCLIP
+-- TÍNH NĂNG SPEED HACK & NOCLIP (ĐÃ NÂNG CẤP ANTI-CHEAT)
 --------------------------------------------------
-RunService.RenderStepped:Connect(function(dt)
+
+-- Đưa NoClip vào Stepped (chạy trước khi tính toán vật lý) để tránh bị kẹt hoặc giật tường
+RunService.Stepped:Connect(function()
+    if Flags.NoClip and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Đưa SpeedHack và Anti-Rubberband vào Heartbeat (chạy sau vật lý) để qua mặt máy chủ
+RunService.Heartbeat:Connect(function(dt)
     if LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -252,24 +265,21 @@ RunService.RenderStepped:Connect(function(dt)
             if Flags.SpeedHack and humanoid.MoveDirection.Magnitude > 0 then
                 local extraMultiplier = Flags.SpeedMultiplier - 1
                 if extraMultiplier > 0 then
-                    local moveDelta = humanoid.MoveDirection * (16 * extraMultiplier) * dt
+                    -- Lấy WalkSpeed chuẩn của Server hiện tại để tính toán thay vì hardcode
+                    local baseSpeed = humanoid.WalkSpeed > 0 and humanoid.WalkSpeed or 16
+                    local moveDelta = humanoid.MoveDirection * (baseSpeed * extraMultiplier) * dt
+                    
                     hrp.CFrame = hrp.CFrame + moveDelta
                     
+                    -- Chống Giật (Bypass Anti-cheat Vận Tốc)
                     if Flags.AntiRubberband then
-                        local currentVel = hrp.AssemblyLinearVelocity
+                        local safeVel = humanoid.MoveDirection * baseSpeed
+                        -- Ghi đè Velocity ở mức an toàn khớp với Server, không tác động tới trục Y (trọng lực rơi/nhảy)
                         hrp.AssemblyLinearVelocity = Vector3.new(
-                            humanoid.MoveDirection.X * 16,
-                            currentVel.Y,
-                            humanoid.MoveDirection.Z * 16
+                            safeVel.X,
+                            hrp.AssemblyLinearVelocity.Y,
+                            safeVel.Z
                         )
-                    end
-                end
-            end
-
-            if Flags.NoClip then
-                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = false
                     end
                 end
             end
@@ -385,7 +395,6 @@ local function getObjectPrompt(targetPart)
         local ancestor = targetPart.Parent.Parent
         while ancestor and ancestor ~= Workspace do
             if ancestor:IsA("Model") then
-                -- Ngăn không lấy nhầm Prompt của cả căn phòng
                 if ancestor.Name:lower():find("room") then break end
                 prompt = ancestor:FindFirstChildWhichIsA("ProximityPrompt", true)
                 if prompt then return prompt end
@@ -404,7 +413,6 @@ local function isItemValidAndUncollected(targetPart)
         return false
     end
 
-    -- 1. Nếu vật phẩm chuyển sang thuộc tính của Nhân vật (Nhặt bởi bản thân hoặc đồng đội)
     local current = targetPart
     while current and current ~= Workspace do
         if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) then
@@ -413,10 +421,7 @@ local function isItemValidAndUncollected(targetPart)
         current = current.Parent
     end
 
-    -- 2. Kiểm tra ProximityPrompt một cách an toàn
     local prompt = getObjectPrompt(targetPart)
-
-    -- Nếu có ProximityPrompt và nó bị khóa (Enabled = false) -> Đã nhặt
     if prompt and not prompt.Enabled then
         return false
     end
@@ -449,7 +454,6 @@ local function createBillboard(targetPart, text, color, flagName)
 
     billboard.Parent = targetPart
 
-    -- KẾT HỢP BẢO VỆ: Sự kiện xóa chủ động khi có tương tác
     local connections = {}
     local function cleanESP()
         for _, conn in ipairs(connections) do
@@ -471,7 +475,6 @@ local function createBillboard(targetPart, text, color, flagName)
             end))
         end
 
-        -- Lắng nghe khi vật phẩm bị xóa khỏi Workspace (Đồng đội lấy vào túi)
         table.insert(connections, targetPart.AncestryChanged:Connect(function(_, parent)
             if not parent or not targetPart:IsDescendantOf(Workspace) then
                 cleanESP()
@@ -479,7 +482,6 @@ local function createBillboard(targetPart, text, color, flagName)
         end))
     end
 
-    -- VÒNG LẶP QUÉT LIÊN TỤC (Loop Tick 0.1s)
     task.spawn(function()
         while targetPart and targetPart.Parent and targetPart:IsDescendantOf(Workspace) do
             if flagName == "ESPItems" then
@@ -503,7 +505,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- ESP NGƯỜI CHƠI (ĐÃ ĐƯỢC FIX LỖI)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -512,7 +514,8 @@ local function setupFullPlayerESP(plr)
         if not char then return end
         local hrp = char:WaitForChild("HumanoidRootPart", 5)
         local head = char:WaitForChild("Head", 5)
-        if not hrp or not head then return end
+        local humanoid = char:WaitForChild("Humanoid", 5)
+        if not hrp or not head or not humanoid then return end
 
         local hl = char:FindFirstChild("Mote_Player_Highlight") or Instance.new("Highlight")
         hl.Name = "Mote_Player_Highlight"
@@ -545,14 +548,14 @@ local function setupFullPlayerESP(plr)
             pcall(function()
                 box = Drawing.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
                 line = Drawing.new("Line"); line.Visible = false; line.Color = ESPColors.Player; line.Thickness = 1.5
-                healthBarBg = Drawing.new("Square"); healthBarBg.Visible = false; healthBarBg.Filled = true; healthBarBg.Color = Color3.fromRGB(0, 0, 0)
-                healthBar = Drawing.new("Square"); healthBar.Visible = false; healthBar.Filled = true
+                healthBarBg = Drawing.new("Square"); healthBarBg.Visible = false; healthBarBg.Filled = true; healthBarBg.Color = Color3.fromRGB(0, 0, 0); healthBarBg.Thickness = 1
+                healthBar = Drawing.new("Square"); healthBar.Visible = false; healthBar.Filled = true; healthBar.Thickness = 1
             end)
         end
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
-            if not char or not char.Parent or not hrp or not hrp.Parent or not Players:FindFirstChild(plr.Name) then
+            if not char or not char.Parent or not hrp or not hrp.Parent or not humanoid or not humanoid.Parent or humanoid.Health <= 0 or not Players:FindFirstChild(plr.Name) then
                 hl:Destroy(); bb:Destroy()
                 if HasDrawing then
                     pcall(function() box:Remove(); line:Remove(); healthBarBg:Remove(); healthBar:Remove() end)
@@ -566,9 +569,11 @@ local function setupFullPlayerESP(plr)
                 local localChar = LocalPlayer.Character
                 local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
 
+                local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+
                 if localHrp then
                     local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
-                    label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
+                    label.Text = string.format("👤 %s\n[%d studs] | %d%%", plr.DisplayName, dist, math.floor(healthPercent * 100))
                 end
 
                 if HasDrawing and box then
@@ -583,6 +588,16 @@ local function setupFullPlayerESP(plr)
                             box.Size = Vector2.new(width, height)
                             box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                             box.Visible = true
+
+                            healthBarBg.Size = Vector2.new(4, height)
+                            healthBarBg.Position = Vector2.new(box.Position.X - 7, box.Position.Y)
+                            healthBarBg.Visible = true
+
+                            local healthHeight = height * healthPercent
+                            healthBar.Size = Vector2.new(2, healthHeight)
+                            healthBar.Position = Vector2.new(box.Position.X - 6, box.Position.Y + (height - healthHeight))
+                            healthBar.Color = Color3.fromRGB(255 - (healthPercent * 255), healthPercent * 255, 0)
+                            healthBar.Visible = true
                         else
                             box.Visible = false; line.Visible = false; healthBarBg.Visible = false; healthBar.Visible = false
                         end
@@ -654,7 +669,6 @@ local function processObject(obj)
     pcall(function()
         if not obj or not obj.Parent then return end
 
-        -- 1. QUÉT VẬT PHẨM
         local itemLabel = getItemLabel(obj.Name)
         if itemLabel then
             local isHeld = false
@@ -674,8 +688,6 @@ local function processObject(obj)
         end
 
         local nameLower = obj.Name:lower()
-
-        -- 2. LỌC QUÁI VẬT CHÍNH XÁC (SỬA LỖI GIGGLE TRỰC TIẾP & LỖI FIGURE BÁO ẢO)
         local monsterModel = nil
         local detectedMonsterName = nil
 
@@ -738,7 +750,6 @@ local function processObject(obj)
             return
         end
 
-        -- 3. XỬ LÝ CỬA, CẦN GẠT, RƯƠNG
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
             local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
             if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
