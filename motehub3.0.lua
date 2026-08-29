@@ -94,8 +94,7 @@ local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
     ["skeletonkey"] = "💀 Chìa Khóa Đầu Lâu", ["flashlight"] = "🔦 Đèn Pin", ["candle"] = "🕯️ Nến",
     ["crucifix"] = "✝️ Cây Thánh Giá", ["lockpick"] = "🗝️ Lockpick", ["bandage"] = "🩹 Băng Gạc",
-    ["vitamins"] = "💊 Vitamin", ["battery"] = "🔋 Pin", ["livehintbook"] = "📘 Sách",
-    ["fuseinplainsight"] = "🔋 Cầu Chì", ["fuse"] = "🔋 Cầu Chì", ["fuseobtain"] = "🔋 Cầu Chì", ["breakerfuse"] = "🔋 Cầu Chì", 
+    ["vitamins"] = "💊 Vitamin", ["battery"] = "🔋 Pin",
     ["glowstick"] = "💡 Que Phát Sáng", ["shears"] = "✂️ Kéo Cắt Cây", ["starlight"] = "🌟 Bình Starlight",
     ["bandagepack"] = "🩹 Hộp Băng Gạc", ["batterypack"] = "🔋 Hộp Pin", ["bulklight"] = "🔦 Đèn Pin Công Nghiệp",
     ["laserpointer"] = "🔴 Đèn Laser", ["alarmclock"] = "⏰ Đồng Hồ Báo Thức", ["compass"] = "🧭 La Bàn",
@@ -113,20 +112,24 @@ local MonsterAdvice = {
 local function getItemLabel(name)
     if not name or name == "" then return nil end
     local lowerName = name:lower()
+    
+    if ImportantItems[lowerName] then
+        return ImportantItems[lowerName]
+    end
+    
     for key, label in pairs(ImportantItems) do
-        if lowerName == key or lowerName:find(key, 1, true) then
+        if lowerName == key or lowerName == (key .. "item") or lowerName == ("item_" .. key) then
             return label
         end
     end
     return nil
 end
 
--- Kiểm tra xem vật thể có phải là tủ, rương, cửa hoặc vật chứa không (để tránh nhầm lẫn cho chìa khóa)
 local function isContainerOrLocker(obj)
     local current = obj
     while current and current ~= Workspace do
         local n = current.Name:lower()
-        if n:find("drawer") or n:find("chest") or n:find("lootbox") or n:find("locker") or n:find("cabinet") or n:find("wardrobe") or n:find("door") or n:find("lock") or n:find("shelf") or n:find("table") then
+        if n:find("drawer") or n:find("chest") or n:find("lootbox") or n:find("locker") or n:find("cabinet") or n:find("wardrobe") or n:find("door") or n:find("lock") or n:find("shelf") or n:find("table") or n:find("dupe") or n:find("bookshelf") or n:find("keyboard") then
             return true
         end
         current = current.Parent
@@ -134,7 +137,6 @@ local function isContainerOrLocker(obj)
     return false
 end
 
--- Kiểm tra xem xung quanh (trong phạm vi 3 studs) đã có ESP vật phẩm này chưa để tránh spam quá nhiều ESP[cite: 3]
 local function isTooCloseToExistingItemESP(pos)
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BillboardGui") and obj.Name:find("Mote_ESP_ESPItems") then
@@ -269,7 +271,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK & NOCLIP (ĐÃ FIX GIẬT VỀ)
+-- TÍNH NĂNG SPEED HACK & NOCLIP
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
@@ -532,7 +534,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- ESP NGƯỜI CHƠI (ĐÃ CẬP NHẬT HIỆN XUYÊN VẬT THỂ & TRACER NỐI TỪ NGƯỜI DÙNG)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -556,27 +558,45 @@ local function setupFullPlayerESP(plr)
         local bb = head:FindFirstChild("Mote_Player_Billboard") or Instance.new("BillboardGui")
         bb.Name = "Mote_Player_Billboard"
         bb.Adornee = head
-        bb.Size = UDim2.new(0, 200, 0, 30)
-        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-        bb.AlwaysOnTop = true
+        bb.Size = UDim2.new(0, 200, 0, 45)
+        bb.StudsOffset = Vector3.new(0, 3, 0)
+        bb.AlwaysOnTop = true -- Bật AlwaysOnTop giúp cả chữ và thanh máu hiện xuyên vật thể
+        bb.LightInfluence = 0 -- Đảm bảo không bị che tối bởi ánh sáng môi trường
 
         local label = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel")
-        label.Size = UDim2.new(1, 0, 1, 0)
+        label.Size = UDim2.new(1, 0, 0, 30)
+        label.Position = UDim2.new(0, 0, 0, 0)
         label.BackgroundTransparency = 1
         label.TextStrokeTransparency = 0
         label.Font = Enum.Font.SourceSansBold
         label.TextSize = 14
         label.TextColor3 = ESPColors.Player
         label.Parent = bb
+        
+        -- THANH MÁU CỐ ĐỊNH TRÊN ĐẦU (HIỆN XUYÊN VẬT THỂ)
+        local healthBg = bb:FindFirstChild("HealthBg") or Instance.new("Frame")
+        healthBg.Name = "HealthBg"
+        healthBg.Size = UDim2.new(0, 80, 0, 7)
+        healthBg.Position = UDim2.new(0.5, -40, 0, 32)
+        healthBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        healthBg.BorderSizePixel = 1
+        healthBg.BorderColor3 = Color3.fromRGB(0, 0, 0)
+        healthBg.Parent = bb
+
+        local healthFill = healthBg:FindFirstChild("HealthFill") or Instance.new("Frame")
+        healthFill.Name = "HealthFill"
+        healthFill.Size = UDim2.new(1, 0, 1, 0)
+        healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        healthFill.BorderSizePixel = 0
+        healthFill.Parent = healthBg
+
         bb.Parent = head
 
-        local box, line, healthBarBg, healthBar
+        local box, line
         if HasDrawing then
             pcall(function()
                 box = Drawing.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
                 line = Drawing.new("Line"); line.Visible = false; line.Color = ESPColors.Player; line.Thickness = 1.5
-                healthBarBg = Drawing.new("Square"); healthBarBg.Visible = false; healthBarBg.Filled = true; healthBarBg.Color = Color3.fromRGB(0, 0, 0); healthBarBg.Thickness = 1
-                healthBar = Drawing.new("Square"); healthBar.Visible = false; healthBar.Filled = true; healthBar.Thickness = 1
             end)
         end
 
@@ -585,7 +605,10 @@ local function setupFullPlayerESP(plr)
             if not char or not char.Parent or not hrp or not hrp.Parent or not humanoid or not humanoid.Parent or humanoid.Health <= 0 or not Players:FindFirstChild(plr.Name) then
                 hl:Destroy(); bb:Destroy()
                 if HasDrawing then
-                    pcall(function() box:Remove(); line:Remove(); healthBarBg:Remove(); healthBar:Remove() end)
+                    pcall(function() 
+                        if box then box:Remove() end 
+                        if line then line:Remove() end 
+                    end)
                 end
                 if renderConnection then renderConnection:Disconnect() end
                 return
@@ -601,6 +624,12 @@ local function setupFullPlayerESP(plr)
                     local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
                     label.Text = string.format("👤 %s\n[%d studs] | %d%%", plr.DisplayName, dist, math.floor(healthPercent * 100))
                 end
+                
+                -- Cập nhật màu và kích thước của Thanh Máu Cố Định
+                if healthFill then
+                    healthFill.Size = UDim2.new(healthPercent, 0, 1, 0)
+                    healthFill.BackgroundColor3 = Color3.fromRGB(255 - (healthPercent * 255), healthPercent * 255, 0)
+                end
 
                 if HasDrawing and box then
                     pcall(function()
@@ -614,25 +643,32 @@ local function setupFullPlayerESP(plr)
                             box.Size = Vector2.new(width, height)
                             box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                             box.Visible = true
-
-                            healthBarBg.Size = Vector2.new(4, height)
-                            healthBarBg.Position = Vector2.new(box.Position.X - 7, box.Position.Y)
-                            healthBarBg.Visible = true
-
-                            local healthHeight = height * healthPercent
-                            healthBar.Size = Vector2.new(2, healthHeight)
-                            healthBar.Position = Vector2.new(box.Position.X - 6, box.Position.Y + (height - healthHeight))
-                            healthBar.Color = Color3.fromRGB(255 - (healthPercent * 255), healthPercent * 255, 0)
-                            healthBar.Visible = true
+                            
+                            -- SỢI DÂY NỐI TỪ THÂN NGƯỜI DÙNG SCRIPT (LocalPlayer) TỚI NGƯỜI CHƠI KHÁC
+                            if line then
+                                if localHrp then
+                                    local myPos, _ = Camera:WorldToViewportPoint(localHrp.Position)
+                                    line.From = Vector2.new(myPos.X, myPos.Y)
+                                else
+                                    local viewportSize = Camera.ViewportSize
+                                    line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
+                                end
+                                line.To = Vector2.new(targetPos.X, targetPos.Y)
+                                line.Visible = true
+                            end
                         else
-                            box.Visible = false; line.Visible = false; healthBarBg.Visible = false; healthBar.Visible = false
+                            box.Visible = false
+                            if line then line.Visible = false end
                         end
                     end)
                 end
             else
                 hl.Enabled = false; bb.Enabled = false
-                if HasDrawing and box then
-                    pcall(function() box.Visible = false; line.Visible = false; healthBarBg.Visible = false; healthBar.Visible = false end)
+                if HasDrawing then
+                    pcall(function() 
+                        if box then box.Visible = false end
+                        if line then line.Visible = false end
+                    end)
                 end
             end
         end)
@@ -689,14 +725,14 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
 end
 
 --------------------------------------------------
--- BỘ QUÉT VẬT THỂ & MÔ HÌNH (ĐÃ TỐI ƯU & FIX LỖI NHẬN DIỆN NHẦM)
+-- BỘ QUÉT VẬT THỂ & MÔ HÌNH
 --------------------------------------------------
 local function processObject(obj)
     pcall(function()
         if not obj or not obj.Parent then return end
         local nameLower = obj.Name:lower()
 
-        -- 1. ƯU TIÊN KIỂM TRA QUÁI VẬT TRƯỚC (Tuyệt đối không bị nhầm lẫn với vật phẩm như Cây Thánh Giá)[cite: 3]
+        -- 1. ƯU TIÊN KIỂM TRA QUÁI VẬT TRƯỚC
         local monsterModel = nil
         local detectedMonsterName = nil
 
@@ -759,7 +795,7 @@ local function processObject(obj)
             return
         end
 
-        -- 2. XỬ LÝ VẬT PHẨM (Loại bỏ tủ/rương và tránh trùng lặp trong bán kính 3 studs)[cite: 3]
+        -- 2. XỬ LÝ VẬT PHẨM
         if not isContainerOrLocker(obj) then
             local itemLabel = getItemLabel(obj.Name)
             if not itemLabel and obj.Parent then
@@ -818,7 +854,7 @@ end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT (ĐÃ FIX XÓA HIỆU ỨNG HANT / HALT)
+-- ANTI-AFK & FULLBRIGHT
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -841,7 +877,6 @@ task.spawn(function()
                 Lighting.OutdoorAmbient = Color3.fromRGB(ambValue, ambValue, ambValue)
                 isFullbrightApplied = true
 
-                -- Xóa hoặc vô hiệu hóa các hiệu ứng làm mờ/tối màn hình (ví dụ hiệu ứng tấn công của con Halt/Hant)
                 for _, child in ipairs(Lighting:GetChildren()) do
                     if child:IsA("BlurEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("Atmosphere") or child:IsA("DepthOfFieldEffect") then
                         child.Enabled = false
@@ -1177,7 +1212,8 @@ authorLbl.Size = UDim2.new(0.96, 0, 0, 20); authorLbl.Position = UDim2.new(0.02,
 registerTextLabel(authorLbl)
 
 local fbLbl = Instance.new("TextLabel")
-fbLbl.Size = UDim2.new(0.96, 0, 0, 20); fbLbl.Position = UDim2.new(0.02, 0, 0, 195); fbLbl.BackgroundTransparency = 1; fbLbl.Text = Translations[Flags.Language].Facebook; fbLbl.Font = Enum.Font.SourceSansBold; fbLbl.TextColor3 = Color3.fromRGB(200, 200, 200); fbLbl.TextXAlignment = Enum.TextXAlignment.Left; fbLbl.Parent = pages[5]
+fbLbl.Size = UDim2.new(0.96, 0, 0, 20); fbLbl.Position = UDim2.new(0.02, 0, 0, 195); fbLbl.BackgroundTransparency = 1; fbLbl.Text = Translations[Flags.Language].Facebook; fbLbl.Font = Enum.Font.SourceSansBold; fbLbl.TextColor3 = Color3.fromRGB(200, 200, 200); fbLbl.TextXAlignment = Enum.TextXAlignment.Left; authorLbl.Parent = pages[5]
+fbLbl.Parent = pages[5]
 registerTextLabel(fbLbl)
 
 local verLbl = Instance.new("TextLabel")
@@ -1221,7 +1257,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Đã tối ưu ESP vật phẩm (lọc 3 studs, fix chìa khóa) & Fix lỗi Fullbright xóa hiệu ứng Halt!",
+        Text = "Mote Hub Đã Sẵn Sàng!",
         Duration = 4
     })
 end)
