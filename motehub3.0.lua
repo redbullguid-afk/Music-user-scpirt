@@ -269,7 +269,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM
+-- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM (Đã fix xung đột với Vitamin)
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
@@ -288,14 +288,18 @@ RunService.Heartbeat:Connect(function(dt)
         
         if hrp and humanoid and humanoid.Health > 0 then
             if Flags.SpeedHack then
-                local baseSpeed = 16
-                local targetSpeed = baseSpeed * Flags.SpeedMultiplier
+                -- Cho phép cộng dồn với hiệu ứng Vitamin (nếu WalkSpeed tự nhiên cao hơn 16)
+                local naturalSpeed = 16
+                if humanoid.WalkSpeed > 16 and humanoid.WalkSpeed < 50 then
+                    naturalSpeed = humanoid.WalkSpeed
+                end
+                local targetSpeed = naturalSpeed * Flags.SpeedMultiplier
                 humanoid.WalkSpeed = targetSpeed
                 
                 if humanoid.MoveDirection.Magnitude > 0 then
                     local extraMultiplier = Flags.SpeedMultiplier - 1
                     if extraMultiplier > 0 then
-                        local moveDelta = humanoid.MoveDirection * (baseSpeed * extraMultiplier) * dt
+                        local moveDelta = humanoid.MoveDirection * (naturalSpeed * extraMultiplier) * dt
                         hrp.CFrame = hrp.CFrame + moveDelta
                         
                         if Flags.AntiRubberband then
@@ -305,7 +309,7 @@ RunService.Heartbeat:Connect(function(dt)
                     end
                 end
             else
-                if humanoid.WalkSpeed > 16 and humanoid.WalkSpeed <= 160 then humanoid.WalkSpeed = 16 end
+                -- Khi tắt SpeedHack, không tự ép về 16 để tránh lỗi hoặc mất hiệu ứng Vitamin
             end
         end
     end
@@ -633,7 +637,6 @@ local function processObject(obj)
             return
         end
 
-        -- LOGIC ITEM ĐÃ ĐƯỢC ĐƯA LÊN TRƯỚC ĐỂ FIX LỖI BỊ CHẶN BỞI CONTAINER
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
@@ -655,7 +658,6 @@ local function processObject(obj)
             return
         end
 
-        -- XỬ LÝ CÁC OBJECT KHÁC (FIX SÓT CỬA)
         if (obj.Name == "Door" or nameLower == "doormodel" or (nameLower:find("door") and not isContainerOrLocker(obj))) and obj:IsA("Model") then
             if not nameLower:find("dupe", 1, true) and not obj:FindFirstChild("DupeDoor") then
                 createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
@@ -678,8 +680,22 @@ end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- ESP NGƯỜI CHƠI (Đã cập nhật màu thanh máu theo % & Dây nối theo màu máu)
 --------------------------------------------------
+local function getHealthColor(percent)
+    if percent >= 0.9 then
+        return Color3.fromRGB(50, 255, 50)   -- 100%: Xanh lá sáng
+    elseif percent >= 0.7 then
+        return Color3.fromRGB(34, 139, 34)  -- 80%: Xanh lá thẫm
+    elseif percent >= 0.4 then
+        return Color3.fromRGB(255, 255, 0)  -- 50%: Vàng sáng
+    elseif percent >= 0.2 then
+        return Color3.fromRGB(255, 140, 0)  -- 30%: Cam sáng
+    else
+        return Color3.fromRGB(255, 50, 50)    -- 10%: Đỏ sáng
+    end
+end
+
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
 
@@ -729,7 +745,7 @@ local function setupFullPlayerESP(plr)
         local healthFill = healthBg:FindFirstChild("HealthFill") or Instance.new("Frame")
         healthFill.Name = "HealthFill"
         healthFill.Size = UDim2.new(1, 0, 1, 0)
-        healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        healthFill.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
         healthFill.BorderSizePixel = 0
         healthFill.Parent = healthBg
 
@@ -739,7 +755,7 @@ local function setupFullPlayerESP(plr)
         if HasDrawing then
             pcall(function()
                 box = Drawing.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
-                line = Drawing.new("Line"); line.Visible = false; line.Color = ESPColors.Player; line.Thickness = 1.5
+                line = Drawing.new("Line"); line.Visible = false; line.Thickness = 1.5
             end)
         end
 
@@ -762,6 +778,7 @@ local function setupFullPlayerESP(plr)
                 local localChar = LocalPlayer.Character
                 local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
                 local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                local currentHealthColor = getHealthColor(healthPercent)
 
                 if localHrp then
                     local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
@@ -770,7 +787,7 @@ local function setupFullPlayerESP(plr)
                 
                 if healthFill then
                     healthFill.Size = UDim2.new(healthPercent, 0, 1, 0)
-                    healthFill.BackgroundColor3 = Color3.fromRGB(255 - (healthPercent * 255), healthPercent * 255, 0)
+                    healthFill.BackgroundColor3 = currentHealthColor
                 end
 
                 if HasDrawing and box then
@@ -795,6 +812,7 @@ local function setupFullPlayerESP(plr)
                                     line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
                                 end
                                 line.To = Vector2.new(targetPos.X, targetPos.Y)
+                                line.Color = currentHealthColor -- Dây nối esp player thay đổi theo màu thanh máu
                                 line.Visible = true
                             end
                         else
