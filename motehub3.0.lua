@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED ESP ITEMS (FLOOR 1 & 2) + CUSTOM ITEMS
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -100,16 +100,17 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối (Fix Hant)", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.01 (Optimized)" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright (Hant Fix)", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.01 (Optimized)" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối (Fix Hant)", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.01 (Fixed)" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright (Hant Fix)", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.01 (Fixed)" }
 }
 
 --------------------------------------------------
--- GIAO DIỆN MÀN HÌNH CHÍNH
+-- GIAO DIỆN MÀN HÌNH CHÍNH (SAFE PARENTING CHO MOBILE)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta301"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 pcall(function()
     local hui = getGlobal("gethui")
@@ -119,6 +120,7 @@ pcall(function()
         screenGui.Parent = CoreGui
     end
 end)
+
 if not screenGui.Parent then 
     pcall(function()
         screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -126,7 +128,7 @@ if not screenGui.Parent then
 end
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (Đã bổ sung Sách, Cầu chì, Cốc bia)
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -166,21 +168,8 @@ local function getItemLabel(name)
     return nil
 end
 
-local function isContainerOrLocker(obj)
-    local current = obj
-    while current and current ~= Workspace do
-        local n = current.Name:lower()
-        if n:find("drawer") or n:find("chest") or n:find("lootbox") or n:find("locker") or n:find("cabinet") or n:find("wardrobe") or n:find("lock") or n:find("shelf") or n:find("table") or n:find("dupe") or n:find("bookshelf") or n:find("keyboard") then
-            return true
-        end
-        current = current.Parent
-    end
-    return false
-end
-
 local function isRealRoomDoor(obj)
     if not obj or not obj:IsA("Model") then return false end
-    
     if obj.Name ~= "Door" and obj.Name ~= "DoorModel" then return false end
     
     for _, child in ipairs(obj:GetChildren()) do
@@ -224,7 +213,7 @@ local function safeInteract(prompt)
             fpp(prompt)
         else
             prompt:InputHoldBegin()
-            task.wait(prompt.HoldDuration)
+            task.wait(prompt.HoldDuration or 0.1)
             prompt:InputHoldEnd()
         end
     end)
@@ -728,8 +717,16 @@ local function processObject(obj)
     end)
 end
 
+-- Tránh lag và crash trên thiết bị di động khi quét Workspace ban đầu
 task.spawn(function()
-    for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
+    pcall(function()
+        for _, obj in ipairs(Workspace:GetChildren()) do 
+            processObject(obj)
+            for _, child in ipairs(obj:GetChildren()) do
+                processObject(child)
+            end
+        end
+    end)
 end)
 Workspace.DescendantAdded:Connect(processObject)
 
@@ -1288,7 +1285,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Mote Hub ESP Thêm Sách, Cầu Chì & Cốc Bia Đã Sẵn Sàng!",
+        Text = "Mote Hub Đã Được Fix & Tối Ưu Cho Thiết Bị Di Động!",
         Duration = 4
     })
 end)
