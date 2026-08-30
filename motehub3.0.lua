@@ -1,3 +1,4 @@
+
 -- ==================================================
 -- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED ESP ITEMS (FLOOR 1 & 2)
 -- ==================================================
@@ -131,11 +132,8 @@ local function getItemLabel(name)
     
     if ImportantItems[lowerName] then return ImportantItems[lowerName] end
     
-    -- Tối ưu nhận diện cho Floor 2 (Hỗ trợ cấu trúc Drops và PickupItems)
     for key, label in pairs(ImportantItems) do
-        if lowerName == key or lowerName == (key .. "item") or lowerName == ("item_" .. key)
-        or lowerName == (key .. "drop") or lowerName == ("drop" .. key) 
-        or lowerName == ("pickup" .. key) or lowerName == (key .. "pickup") then
+        if lowerName == key or lowerName == (key .. "item") or lowerName == ("item_" .. key) then
             return label
         end
     end
@@ -156,6 +154,7 @@ end
 
 local function isRealRoomDoor(obj)
     if not obj or not obj:IsA("Model") then return false end
+    
     if obj.Name ~= "Door" and obj.Name ~= "DoorModel" then return false end
     
     for _, child in ipairs(obj:GetChildren()) do
@@ -170,6 +169,7 @@ local function isRealRoomDoor(obj)
             return false 
         end
     end
+    
     return true
 end
 
@@ -421,7 +421,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG (FIXED CHO FLOOR 2)
 --------------------------------------------------
 local TrackedESPs = setmetatable({}, { __mode = "k" })
 
@@ -434,24 +434,17 @@ local function getSafePart(obj)
     return obj:FindFirstChildWhichIsA("BasePart", true)
 end
 
+-- Đã sửa: Tìm ProximityPrompt triệt để hơn, không bị ngắt quãng giữa chừng bởi cấu trúc thư mục Room của Floor 2
 local function getObjectPrompt(targetObj)
     if not targetObj then return nil end
     local prompt = targetObj:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then return prompt end
     
-    if targetObj.Parent and targetObj.Parent ~= Workspace then
-        prompt = targetObj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+    local current = targetObj.Parent
+    while current and current ~= Workspace do
+        prompt = current:FindFirstChildWhichIsA("ProximityPrompt", true)
         if prompt then return prompt end
-        
-        local ancestor = targetObj.Parent.Parent
-        while ancestor and ancestor ~= Workspace do
-            if ancestor:IsA("Model") then
-                if ancestor.Name:lower():find("room") then break end
-                prompt = ancestor:FindFirstChildWhichIsA("ProximityPrompt", true)
-                if prompt then return prompt end
-            end
-            ancestor = ancestor.Parent
-        end
+        current = current.Parent
     end
     return nil
 end
@@ -463,15 +456,12 @@ local function isItemValidAndUncollected(targetObj)
 
     local current = targetObj
     while current and current ~= Workspace do
-        -- Sửa lỗi ESP biến mất ở Floor 2: Chỉ lấy Player thật sự để tránh quét nhầm các Model/Cơ chế có chứa Humanoid
-        if Players:GetPlayerFromCharacter(current) then
+        if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) then
             return false
         end
         current = current.Parent
     end
 
-    local prompt = getObjectPrompt(targetObj)
-    if prompt and prompt.Parent == nil then return false end
     return true
 end
 
@@ -529,17 +519,27 @@ local function createBillboard(targetObj, text, color, flagName)
     end
 
     if flagName == "ESPItems" then
-        local prompt = getObjectPrompt(targetObj)
-        if prompt then
-            table.insert(connections, prompt.Triggered:Connect(function()
-                task.wait(0.05)
-                cleanESP()
-            end))
-            table.insert(connections, prompt.TriggerEnded:Connect(function()
-                task.wait(0.05)
-                if not isItemValidAndUncollected(targetObj) then cleanESP() end
-            end))
+        local function setupPromptConnection()
+            local prompt = getObjectPrompt(targetObj)
+            if prompt then
+                table.insert(connections, prompt.Triggered:Connect(function()
+                    task.wait(0.05)
+                    cleanESP()
+                end))
+                table.insert(connections, prompt.TriggerEnded:Connect(function()
+                    task.wait(0.05)
+                    if not isItemValidAndUncollected(targetObj) then cleanESP() end
+                end))
+            end
         end
+        setupPromptConnection()
+
+        -- Hỗ trợ lắng nghe khi ProximityPrompt load bất đồng bộ ở Floor 2
+        table.insert(connections, targetObj.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("ProximityPrompt") then
+                setupPromptConnection()
+            end
+        end))
 
         table.insert(connections, targetObj.AncestryChanged:Connect(function(_, parent)
             if not parent or not targetObj:IsDescendantOf(Workspace) then cleanESP() end
@@ -570,7 +570,7 @@ local function createBillboard(targetObj, text, color, flagName)
 end
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (CẬP NHẬT HỖ TRỢ FLOOR 2)
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -654,20 +654,19 @@ local function processObject(obj)
             return
         end
 
+        -- Quét tên vật phẩm linh hoạt hơn cho cả Floor 1 và Floor 2
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
 
-        -- Sửa lỗi ESP cho Floor 2: Đọc trực tiếp ProximityPrompt để bắt tên vật phẩm bị đổi sang cấu trúc Drop/Loot
-        local targetESPObj = obj
         if not itemLabel then
-            local prompt = obj:IsA("ProximityPrompt") and obj or obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-            if prompt and prompt.ObjectText and prompt.ObjectText ~= "" then
-                local pText = prompt.ObjectText:lower()
-                for key, label in pairs(ImportantItems) do
-                    if pText:find(key) then
-                        itemLabel = label
-                        targetESPObj = prompt.Parent or obj
+            for _, desc in ipairs(obj:GetDescendants()) do
+                itemLabel = getItemLabel(desc.Name)
+                if itemLabel then break end
+                if desc:IsA("ProximityPrompt") then
+                    local act = (desc.ActionText or ""):lower()
+                    if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") then
+                        itemLabel = getItemLabel(desc.Parent.Name) or getItemLabel(obj.Name) or "📦 Vật Phẩm"
                         break
                     end
                 end
@@ -676,17 +675,16 @@ local function processObject(obj)
 
         if itemLabel then
             local isHeld = false
-            local ancestor = targetESPObj.Parent
+            local ancestor = obj.Parent
             while ancestor and ancestor ~= Workspace do
-                -- Sửa lỗi loại trừ nhầm các cơ chế của Floor 2
-                if Players:GetPlayerFromCharacter(ancestor) then isHeld = true; break end
+                if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
                 ancestor = ancestor.Parent
             end
 
             if not isHeld then
-                local tPart = getSafePart(targetESPObj)
+                local tPart = getSafePart(obj)
                 if tPart and not isTooCloseToExistingItemESP(tPart.Position) then
-                    createBillboard(targetESPObj, itemLabel, ESPColors.Items, "ESPItems")
+                    createBillboard(obj, itemLabel, ESPColors.Items, "ESPItems")
                 end
             end
             return
@@ -873,7 +871,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT (FIX MÀN HÌNH XANH LÈ)
+-- ANTI-AFK & FULLBRIGHT
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -950,365 +948,316 @@ local function makeDraggable(gui)
     end)
 end
 
-local function getText(key) return Translations[Flags.Language][key] or key end
+local circleBtn = Instance.new("TextButton")
+circleBtn.Size = UDim2.new(0, 50, 0, 50); circleBtn.Position = UDim2.new(0.05, 0, 0.2, 0); circleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20); circleBtn.TextColor3 = Themes.YellowBlack.Accent; circleBtn.Text = "mote"; circleBtn.Font = Enum.Font.GothamBold; circleBtn.TextSize = 13; circleBtn.Parent = screenGui
+makeDraggable(circleBtn)
+local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1, 0); btnCorner.Parent = circleBtn
+local btnStroke = Instance.new("UIStroke"); btnStroke.Color = Themes.YellowBlack.Accent; btnStroke.Thickness = 2; btnStroke.Parent = circleBtn
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 520, 0, 360)
-mainFrame.Position = UDim2.new(0.5, -260, 0.5, -180)
-mainFrame.BackgroundColor3 = Themes[Flags.Theme].FrameBg
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 520, 0, 280); mainFrame.Position = UDim2.new(0.25, 0, 0.3, 0); mainFrame.AnchorPoint = Vector2.new(0.5, 0.5); mainFrame.BackgroundColor3 = Themes.YellowBlack.FrameBg; mainFrame.BorderSizePixel = 0; mainFrame.Visible = false; mainFrame.ClipsDescendants = true; mainFrame.Parent = screenGui
 makeDraggable(mainFrame)
-local mainUICorner = Instance.new("UICorner"); mainUICorner.CornerRadius = UDim.new(0, 8); mainUICorner.Parent = mainFrame
+
+local frameCorner = Instance.new("UICorner"); frameCorner.CornerRadius = UDim.new(0, 10); frameCorner.Parent = mainFrame
+local frameStroke = Instance.new("UIStroke"); frameStroke.Color = Themes.YellowBlack.Accent; frameStroke.Thickness = 2; frameStroke.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -40, 0, 40)
-titleLabel.Position = UDim2.new(0, 15, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "🌟 MOTE HUB BETA 3.01 (OPTIMIZED)"
-titleLabel.TextColor3 = Themes[Flags.Theme].Accent
-titleLabel.TextSize = 18
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = mainFrame
+titleLabel.Size = UDim2.new(1, 0, 0, 36); titleLabel.BackgroundColor3 = Themes.YellowBlack.HeaderBg; titleLabel.TextColor3 = Themes.YellowBlack.Accent; titleLabel.Text = "   MOTE HUB BETA 3.01"; titleLabel.Font = Enum.Font.GothamBold; titleLabel.TextSize = 14; titleLabel.TextXAlignment = Enum.TextXAlignment.Left; titleLabel.Parent = mainFrame
+local titleCorner = Instance.new("UICorner"); titleCorner.CornerRadius = UDim.new(0, 10); titleCorner.Parent = titleLabel
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 5)
-closeBtn.BackgroundColor3 = Color3.fromRGB(239, 68, 68)
-closeBtn.Text = "X"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 14
-closeBtn.Parent = mainFrame
-local closeBtnCorner = Instance.new("UICorner"); closeBtnCorner.CornerRadius = UDim.new(0, 6); closeBtnCorner.Parent = closeBtn
-closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+local tabNav = Instance.new("Frame")
+tabNav.Size = UDim2.new(0.96, 0, 0, 30); tabNav.Position = UDim2.new(0.02, 0, 0.15, 0); tabNav.BackgroundTransparency = 1; tabNav.Parent = mainFrame
 
-local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(1, -20, 0, 35)
-tabContainer.Position = UDim2.new(0, 10, 0, 45)
-tabContainer.BackgroundColor3 = Themes[Flags.Theme].HeaderBg
-tabContainer.Parent = mainFrame
-local tabContainerCorner = Instance.new("UICorner"); tabContainerCorner.CornerRadius = UDim.new(0, 6); tabContainerCorner.Parent = tabContainer
+local tabs, pages = {}, {}
+local tabNames = {"Main", "ESP", "Automation", "Experimental", "Settings"}
 
-local contentContainer = Instance.new("Frame")
-contentContainer.Size = UDim2.new(1, -20, 1, -100)
-contentContainer.Position = UDim2.new(0, 10, 0, 90)
-contentContainer.BackgroundColor3 = Themes[Flags.Theme].InnerBg
-contentContainer.Parent = mainFrame
-local contentContainerCorner = Instance.new("UICorner"); contentContainerCorner.CornerRadius = UDim.new(0, 6); contentContainerCorner.Parent = contentContainer
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(0.96, 0, 0.72, 0); contentFrame.Position = UDim2.new(0.02, 0, 0.26, 0); contentFrame.BackgroundColor3 = Themes.YellowBlack.InnerBg; contentFrame.BorderSizePixel = 0; contentFrame.Parent = mainFrame
+local contentCorner = Instance.new("UICorner"); contentCorner.CornerRadius = UDim.new(0, 8); contentCorner.Parent = contentFrame
 
-local Tabs = {}; local Pages = {}; local activeTab = nil
+local registeredUIElements = { ToggleStrokes = {} }
 
-local function createTab(name, transKey)
-    local tabBtn = Instance.new("TextButton")
-    tabBtn.Size = UDim2.new(0.2, 0, 1, 0)
-    tabBtn.BackgroundTransparency = 1
-    tabBtn.Text = getText(transKey)
-    tabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-    tabBtn.Font = Enum.Font.GothamSemibold
-    tabBtn.TextSize = 13
-    registerTextLabel(tabBtn)
-    
+local function applyTheme()
+    local t = Themes[Flags.Theme]
+    mainFrame.BackgroundColor3 = t.FrameBg; frameStroke.Color = t.Accent
+    titleLabel.BackgroundColor3 = t.HeaderBg; titleLabel.TextColor3 = t.Accent
+    circleBtn.TextColor3 = t.Accent; btnStroke.Color = t.Accent
+
+    for idx, btn in ipairs(tabs) do
+        if pages[idx].Visible then
+            btn.BackgroundColor3 = t.Accent; btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); btn.TextColor3 = t.Text
+        end
+    end
+
+    for _, obj in ipairs(registeredUIElements.ToggleStrokes) do
+        if obj.FlagValue then obj.Stroke.Color = t.Accent else obj.Stroke.Color = Color3.fromRGB(80, 80, 80) end
+        if obj.Dot then obj.Dot.BackgroundColor3 = obj.FlagValue and t.Accent or Color3.fromRGB(150, 150, 150) end
+    end
+end
+
+for i, name in ipairs(tabNames) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.19, 0, 1, 0); btn.Position = UDim2.new((i - 1) * 0.202, 0, 0, 0); btn.BackgroundColor3 = (i == 1) and Themes.YellowBlack.Accent or Color3.fromRGB(35, 35, 35); btn.TextColor3 = (i == 1) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255); btn.Font = Enum.Font.SourceSansBold; btn.Text = Translations[Flags.Language][name] or name; btn.Parent = tabNav
+    registerTextLabel(btn)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 6); c.Parent = btn
+
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -20, 1, -20)
-    page.Position = UDim2.new(0, 10, 0, 10)
-    page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 4
-    page.CanvasSize = UDim2.new(0, 0, 0, 0)
-    page.Visible = false
-    page.Parent = contentContainer
+    page.Size = UDim2.new(1, -10, 1, -10); page.Position = UDim2.new(0, 5, 0, 5); page.BackgroundTransparency = 1; page.ScrollBarThickness = 4; page.Visible = (i == 1); page.Parent = contentFrame
     
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = page
-    
-    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
-    end)
-    
-    Tabs[name] = tabBtn; Pages[name] = page
-    
-    tabBtn.MouseButton1Click:Connect(function()
-        if activeTab == name then return end
-        activeTab = name
-        for tName, btn in pairs(Tabs) do
-            if tName == name then
-                btn.TextColor3 = Themes[Flags.Theme].Accent
-                TweenService:Create(btn, TweenInfo.new(0.2), {TextSize = Flags.TextSize + 1}):Play()
-                Pages[tName].Visible = true
-            else
-                btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-                TweenService:Create(btn, TweenInfo.new(0.2), {TextSize = Flags.TextSize}):Play()
-                Pages[tName].Visible = false
-            end
+    tabs[i] = btn; pages[i] = page
+
+    btn.MouseButton1Click:Connect(function()
+        for j, p in ipairs(pages) do
+            p.Visible = (j == i)
+            tabs[j].BackgroundColor3 = (j == i) and Themes[Flags.Theme].Accent or Color3.fromRGB(35, 35, 35)
+            tabs[j].TextColor3 = (j == i) and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
         end
     end)
-    
-    return tabBtn, page
 end
 
-local function addToggle(page, labelText, flagKey, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 35)
-    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    frame.Parent = page
-    local fCorner = Instance.new("UICorner"); fCorner.CornerRadius = UDim.new(0, 6); fCorner.Parent = frame
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -60, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = labelText
-    label.TextColor3 = Themes[Flags.Theme].Text
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-    registerTextLabel(label)
-    
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 45, 0, 22)
-    toggleBtn.Position = UDim2.new(1, -55, 0.5, -11)
-    toggleBtn.BackgroundColor3 = Flags[flagKey] and Themes[Flags.Theme].Accent or Color3.fromRGB(60, 60, 60)
-    toggleBtn.Text = ""
-    toggleBtn.Parent = frame
-    local tCorner = Instance.new("UICorner"); tCorner.CornerRadius = UDim.new(1, 0); tCorner.Parent = toggleBtn
-    
-    local circle = Instance.new("Frame")
-    circle.Size = UDim2.new(0, 18, 0, 18)
-    circle.Position = Flags[flagKey] and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
-    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    circle.Parent = toggleBtn
-    local cCorner = Instance.new("UICorner"); cCorner.CornerRadius = UDim.new(1, 0); cCorner.Parent = circle
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        Flags[flagKey] = not Flags[flagKey]
-        local isEnabled = Flags[flagKey]
-        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = isEnabled and Themes[Flags.Theme].Accent or Color3.fromRGB(60, 60, 60)}):Play()
-        TweenService:Create(circle, TweenInfo.new(0.2), {Position = isEnabled and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)}):Play()
-        if callback then callback(isEnabled) end
+local function createToggleSwitch(parent, labelText, flagName, posY, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0.96, 0, 0, 32); container.Position = UDim2.new(0.02, 0, 0, posY); container.BackgroundTransparency = 1; container.Parent = parent
+
+    local textLbl = Instance.new("TextLabel")
+    textLbl.Size = UDim2.new(0.7, 0, 1, 0); textLbl.BackgroundTransparency = 1; textLbl.Text = labelText; textLbl.Font = Enum.Font.SourceSansBold; textLbl.TextColor3 = Color3.fromRGB(255, 255, 255); textLbl.TextXAlignment = Enum.TextXAlignment.Left; textLbl.Parent = container
+    registerTextLabel(textLbl)
+
+    local toggleBg = Instance.new("TextButton")
+    toggleBg.Size = UDim2.new(0, 44, 0, 22); toggleBg.Position = UDim2.new(1, -48, 0.5, -11); toggleBg.BackgroundColor3 = Color3.fromRGB(15, 15, 15); toggleBg.Text = ""; toggleBg.AutoButtonColor = false; toggleBg.Parent = container
+    local toggleCorner = Instance.new("UICorner"); toggleCorner.CornerRadius = UDim.new(1, 0); toggleCorner.Parent = toggleBg
+    local toggleStroke = Instance.new("UIStroke"); toggleStroke.Thickness = 1.5; toggleStroke.Parent = toggleBg
+
+    local toggleDot = Instance.new("Frame")
+    toggleDot.Size = UDim2.new(0, 16, 0, 16); toggleDot.Parent = toggleBg
+    local dotCorner = Instance.new("UICorner"); dotCorner.CornerRadius = UDim.new(1, 0); dotCorner.Parent = toggleDot
+
+    local record = { Stroke = toggleStroke, Dot = toggleDot, FlagValue = Flags[flagName] }
+    table.insert(registeredUIElements.ToggleStrokes, record)
+
+    local function updateVisual(animated)
+        local isON = Flags[flagName]
+        record.FlagValue = isON
+        local tTheme = Themes[Flags.Theme]
+        local targetPos = isON and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+        local targetColor = isON and tTheme.Accent or Color3.fromRGB(150, 150, 150)
+        local targetStroke = isON and tTheme.Accent or Color3.fromRGB(80, 80, 80)
+
+        if animated then
+            TweenService:Create(toggleBg, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 48, 0, 24)}):Play()
+            task.delay(0.1, function()
+                TweenService:Create(toggleBg, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 44, 0, 22)}):Play()
+            end)
+            TweenService:Create(toggleDot, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = targetPos, BackgroundColor3 = targetColor}):Play()
+            TweenService:Create(toggleStroke, TweenInfo.new(0.2), {Color = targetStroke}):Play()
+        else
+            toggleDot.Position = targetPos; toggleDot.BackgroundColor3 = targetColor; toggleStroke.Color = targetStroke
+        end
+    end
+
+    toggleBg.MouseButton1Click:Connect(function()
+        Flags[flagName] = not Flags[flagName]
+        updateVisual(true)
+        if callback then callback(Flags[flagName]) end
     end)
-    return label
+
+    updateVisual(false)
+    return container
 end
 
-local function addSlider(page, labelText, flagKey, min, max, isFloat, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 50)
-    frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    frame.Parent = page
-    local fCorner = Instance.new("UICorner"); fCorner.CornerRadius = UDim.new(0, 6); fCorner.Parent = frame
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -20, 0, 20)
-    label.Position = UDim2.new(0, 10, 0, 5)
-    label.BackgroundTransparency = 1
-    label.Text = labelText .. ": " .. tostring(Flags[flagKey])
-    label.TextColor3 = Themes[Flags.Theme].Text
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
-    registerTextLabel(label)
-    
-    local sliderBg = Instance.new("Frame")
-    sliderBg.Size = UDim2.new(1, -20, 0, 6)
-    sliderBg.Position = UDim2.new(0, 10, 0, 32)
-    sliderBg.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    sliderBg.Parent = frame
-    local bgCorner = Instance.new("UICorner"); bgCorner.CornerRadius = UDim.new(1, 0); bgCorner.Parent = sliderBg
-    
+local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(0.96, 0, 0, 40); container.Position = UDim2.new(0.02, 0, 0, posY); container.BackgroundTransparency = 1; container.Parent = parent
+
+    local textLbl = Instance.new("TextLabel")
+    textLbl.Size = UDim2.new(0.7, 0, 0, 18); textLbl.BackgroundTransparency = 1; textLbl.Text = labelText .. ": " .. tostring(currentVal); textLbl.Font = Enum.Font.SourceSansBold; textLbl.TextColor3 = Color3.fromRGB(255, 255, 255); textLbl.TextXAlignment = Enum.TextXAlignment.Left; textLbl.Parent = container
+    registerTextLabel(textLbl)
+
+    local sliderTrack = Instance.new("TextButton")
+    sliderTrack.Size = UDim2.new(1, 0, 0, 8); sliderTrack.Position = UDim2.new(0, 0, 0, 24); sliderTrack.BackgroundColor3 = Color3.fromRGB(15, 15, 15); sliderTrack.Text = ""; sliderTrack.AutoButtonColor = false; sliderTrack.Parent = container
+    local trackCorner = Instance.new("UICorner"); trackCorner.CornerRadius = UDim.new(1, 0); trackCorner.Parent = sliderTrack
+
     local sliderFill = Instance.new("Frame")
-    local pct = (Flags[flagKey] - min) / (max - min)
-    sliderFill.Size = UDim2.new(pct, 0, 1, 0)
-    sliderFill.BackgroundColor3 = Themes[Flags.Theme].Accent
-    sliderFill.Parent = sliderBg
+    local initRatio = math.clamp((currentVal - minVal) / (maxVal - minVal), 0, 1)
+    sliderFill.Size = UDim2.new(initRatio, 0, 1, 0); sliderFill.BackgroundColor3 = Themes[Flags.Theme].Accent; sliderFill.BorderSizePixel = 0; sliderFill.Parent = sliderTrack
     local fillCorner = Instance.new("UICorner"); fillCorner.CornerRadius = UDim.new(1, 0); fillCorner.Parent = sliderFill
-    
-    local knob = Instance.new("TextButton")
-    knob.Size = UDim2.new(0, 14, 0, 14)
-    knob.Position = UDim2.new(pct, -7, 0.5, -7)
-    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    knob.Text = ""
-    knob.Parent = sliderBg
-    local kCorner = Instance.new("UICorner"); kCorner.CornerRadius = UDim.new(1, 0); kCorner.Parent = knob
-    
-    local dragging = false
-    local function updateSlider(input)
-        local relX = math.clamp(input.Position.X - sliderBg.AbsolutePosition.X, 0, sliderBg.AbsoluteSize.X)
-        local pct = relX / sliderBg.AbsoluteSize.X
-        local val = min + (max - min) * pct
-        if not isFloat then val = math.floor(val + 0.5) else val = math.floor(val * 10) / 10 end
-        
-        Flags[flagKey] = val
-        label.Text = labelText .. ": " .. tostring(val)
-        sliderFill.Size = UDim2.new(pct, 0, 1, 0)
-        knob.Position = UDim2.new(pct, -7, 0.5, -7)
+
+    local isDragging = false
+    local function updateValue(input)
+        local posX = math.clamp((input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X, 0, 1)
+        sliderFill.Size = UDim2.new(posX, 0, 1, 0)
+        local val = math.floor((minVal + (maxVal - minVal) * posX) * 10) / 10
+        textLbl.Text = labelText .. ": " .. tostring(val)
         if callback then callback(val) end
     end
-    
-    knob.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true end end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider(input) end
+
+    sliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = true; updateValue(input) end
     end)
-    return label
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateValue(input) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = false end
+    end)
+
+    return container
 end
 
-local tabMainBtn, pageMain = createTab("Main", "Main")
-local tabEspBtn, pageEsp = createTab("ESP", "ESP")
-local tabAutoBtn, pageAuto = createTab("Automation", "Automation")
-local tabExpBtn, pageExp = createTab("Experimental", "Experimental")
-local tabSetBtn, pageSet = createTab("Settings", "Settings")
+local jumpButtonUI = Instance.new("TextButton")
+jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
+makeDraggable(jumpButtonUI)
+local jc = Instance.new("UICorner"); jc.CornerRadius = UDim.new(1, 0); jc.Parent = jumpButtonUI
+local js = Instance.new("UIStroke"); js.Color = Color3.fromRGB(255, 255, 255); js.Thickness = 2; js.Parent = jumpButtonUI
 
-local uiElements = {}
-
-uiElements.AntiAFK = addToggle(pageMain, getText("AntiAFK"), "AntiAFK")
-uiElements.MonsterNotify = addToggle(pageMain, getText("MonsterNotify"), "MonsterNotify")
-uiElements.Fullbright = addToggle(pageMain, getText("Fullbright"), "SmartFullbright")
-uiElements.FullbrightIntensity = addSlider(pageMain, "   ↳ Độ sáng Fullbright (%)", "FullbrightIntensity", 0, 100, false)
-
-addToggle(pageEsp, "1. Cửa ESP (Door)", "ESPDoor")
-addToggle(pageEsp, "2. Vật Phẩm ESP (Items)", "ESPItems")
-addToggle(pageEsp, "3. Quái Vật ESP (Monsters)", "ESPMonster")
-addToggle(pageEsp, "4. Cầu Dao / Cần Gạt ESP (Lever)", "ESPLever")
-addToggle(pageEsp, "5. Rương Đồ ESP (Chest)", "ESPChest")
-addToggle(pageEsp, "6. Người Chơi Khác ESP", "ESPPlayer")
-
-uiElements.AutoDrawers = addToggle(pageAuto, getText("AutoDrawers"), "AutoDrawersLoot")
-uiElements.AutoDoorKey = addToggle(pageAuto, getText("AutoDoorKey"), "AutoKeyDoor")
-
-uiElements.NoClip = addToggle(pageExp, getText("NoClip"), "NoClip")
-local jumpBtnLabel = nil
-local function setupJumpButton()
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btn.Text = getText("Jump")
-    btn.TextColor3 = Themes[Flags.Theme].Text
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 13
-    btn.Parent = pageExp
-    local bCorner = Instance.new("UICorner"); bCorner.CornerRadius = UDim.new(0, 6); bCorner.Parent = btn
-    registerTextLabel(btn)
-    jumpBtnLabel = btn
-    
-    btn.MouseButton1Click:Connect(function()
-        if LocalPlayer.Character then
-            local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid and humanoid.Health > 0 then
-                humanoid.JumpPower = 50
-                humanoid.Jump = true
+jumpButtonUI.MouseButton1Click:Connect(function()
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if humanoid and hrp then
+            local state = humanoid:GetState()
+            if state ~= Enum.HumanoidStateType.Freefall and state ~= Enum.HumanoidStateType.Jumping then
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = 38
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                hrp.AssemblyLinearVelocity = Vector3.new(hrp.AssemblyLinearVelocity.X, 38, hrp.AssemblyLinearVelocity.Z)
             end
         end
-    end)
+    end
+end)
+
+local flyControlFrame = Instance.new("Frame")
+flyControlFrame.Size = UDim2.new(0, 45, 0, 95); flyControlFrame.Position = UDim2.new(0.02, 0, 0.5, 0); flyControlFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); flyControlFrame.Visible = false; flyControlFrame.Parent = screenGui
+makeDraggable(flyControlFrame)
+local ccC = Instance.new("UICorner"); ccC.CornerRadius = UDim.new(0, 8); ccC.Parent = flyControlFrame
+local ccS = Instance.new("UIStroke"); ccS.Color = Color3.fromRGB(160, 32, 240); ccS.Thickness = 2; ccS.Parent = flyControlFrame
+
+local btnUp = Instance.new("TextButton")
+btnUp.Size = UDim2.new(1, 0, 0.5, 0); btnUp.BackgroundTransparency = 1; btnUp.Text = "▲"; btnUp.TextColor3 = Color3.fromRGB(0, 255, 128); btnUp.Font = Enum.Font.GothamBold; btnUp.TextSize = 18; btnUp.Parent = flyControlFrame
+
+local btnDown = Instance.new("TextButton")
+btnDown.Size = UDim2.new(1, 0, 0.5, 0); btnDown.Position = UDim2.new(0, 0, 0.5, 0); btnDown.BackgroundTransparency = 1; btnDown.Text = "▼"; btnDown.TextColor3 = Color3.fromRGB(255, 50, 50); btnDown.Font = Enum.Font.GothamBold; btnDown.TextSize = 18; btnDown.Parent = flyControlFrame
+
+btnUp.MouseButton1Down:Connect(function() flyVerticalSpeed = 25 end)
+btnUp.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
+btnDown.MouseButton1Down:Connect(function() flyVerticalSpeed = -25 end)
+btnDown.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
+
+local function updateFlyControlVisibility() flyControlFrame.Visible = Flags.FlyCarpet or Flags.FreecamSoul end
+
+-- TAB 1
+createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
+createToggleSwitch(pages[1], Translations[Flags.Language].MonsterNotify, "MonsterNotify", 40)
+createToggleSwitch(pages[1], Translations[Flags.Language].Fullbright, "SmartFullbright", 75)
+createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 110, function(val) Flags.FullbrightIntensity = val end)
+
+-- TAB 2
+createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
+createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Floor 1 & 2 Items)", "ESPItems", 40)
+createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Floor 2)", "ESPMonster", 75)
+createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
+createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
+createToggleSwitch(pages[2], "🟠 ESP Người Chơi", "ESPPlayer", 180)
+
+-- TAB 3
+createToggleSwitch(pages[3], Translations[Flags.Language].AutoDrawers, "AutoDrawersLoot", 5)
+createToggleSwitch(pages[3], Translations[Flags.Language].AutoDoorKey, "AutoKeyDoor", 40)
+
+-- TAB 4
+createToggleSwitch(pages[4], Translations[Flags.Language].NoClip, "NoClip", 5)
+createToggleSwitch(pages[4], Translations[Flags.Language].Jump, "DoorsJump", 40, function(st) jumpButtonUI.Visible = st end)
+createToggleSwitch(pages[4], Translations[Flags.Language].Speed, "SpeedHack", 75)
+createSlider(pages[4], "  └ Tốc Độ (1.0x - 10.0x)", 1.0, 10.0, Flags.SpeedMultiplier, 110, function(val) Flags.SpeedMultiplier = val end)
+createToggleSwitch(pages[4], "🛡️ Anti Rubberband (Chống Giật Về)", "AntiRubberband", 155)
+createToggleSwitch(pages[4], Translations[Flags.Language].Freecam, "FreecamSoul", 190, function(st) setFreecamState(st); updateFlyControlVisibility() end)
+createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet", 225, function(st) updateFlyControlVisibility() end)
+
+-- TAB 5
+local themeLbl = Instance.new("TextLabel")
+themeLbl.Size = UDim2.new(0.96, 0, 0, 20); themeLbl.Position = UDim2.new(0.02, 0, 0, 5); themeLbl.BackgroundTransparency = 1; themeLbl.Text = Translations[Flags.Language].ThemeTitle; themeLbl.Font = Enum.Font.SourceSansBold; themeLbl.TextColor3 = Color3.fromRGB(255, 255, 255); themeLbl.TextXAlignment = Enum.TextXAlignment.Left; themeLbl.Parent = pages[5]
+registerTextLabel(themeLbl)
+
+local themeBtns = { { Name = "Vàng Đen", Key = "YellowBlack", Pos = 0 }, { Name = "Đỏ Đen", Key = "RedBlack", Pos = 0.25 }, { Name = "Xanh Đen", Key = "GreenBlack", Pos = 0.50 }, { Name = "Hồng Đen", Key = "PinkBlack", Pos = 0.75 } }
+for _, tData in ipairs(themeBtns) do
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0.23, 0, 0, 25); b.Position = UDim2.new(tData.Pos, 0, 0, 28); b.BackgroundColor3 = Color3.fromRGB(35, 35, 35); b.TextColor3 = Color3.fromRGB(255, 255, 255); b.Text = tData.Name; b.Font = Enum.Font.SourceSansBold; b.Parent = pages[5]
+    registerTextLabel(b)
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, 4); c.Parent = b
+    b.MouseButton1Click:Connect(function() Flags.Theme = tData.Key; applyTheme() end)
 end
-setupJumpButton()
 
-uiElements.SpeedHack = addToggle(pageExp, getText("Speed"), "SpeedHack")
-uiElements.SpeedMult = addSlider(pageExp, "   ↳ Tốc Độ (x)", "SpeedMultiplier", 1.0, 10.0, true)
-uiElements.AntiRubberband = addToggle(pageExp, "   ↳ Anti-Rubberband (Chống giật ngược)", "AntiRubberband")
-uiElements.Freecam = addToggle(pageExp, getText("Freecam"), "FreecamSoul", function(state) setFreecamState(state) end)
-uiElements.FlyCarpet = addToggle(pageExp, getText("FlyCarpet"), "FlyCarpet")
+local langLbl = Instance.new("TextLabel")
+langLbl.Size = UDim2.new(0.96, 0, 0, 20); langLbl.Position = UDim2.new(0.02, 0, 0, 62); langLbl.BackgroundTransparency = 1; langLbl.Text = Translations[Flags.Language].LangTitle; langLbl.Font = Enum.Font.SourceSansBold; langLbl.TextColor3 = Color3.fromRGB(255, 255, 255); langLbl.TextXAlignment = Enum.TextXAlignment.Left; langLbl.Parent = pages[5]
+registerTextLabel(langLbl)
 
-local function updateLanguage()
-    tabMainBtn.Text = getText("Main")
-    tabEspBtn.Text = getText("ESP")
-    tabAutoBtn.Text = getText("Automation")
-    tabExpBtn.Text = getText("Experimental")
-    tabSetBtn.Text = getText("Settings")
-    
-    uiElements.AntiAFK.Text = getText("AntiAFK")
-    uiElements.MonsterNotify.Text = getText("MonsterNotify")
-    uiElements.Fullbright.Text = getText("Fullbright")
-    
-    uiElements.AutoDrawers.Text = getText("AutoDrawers")
-    uiElements.AutoDoorKey.Text = getText("AutoDoorKey")
-    
-    uiElements.NoClip.Text = getText("NoClip")
-    if jumpBtnLabel then jumpBtnLabel.Text = getText("Jump") end
-    uiElements.SpeedHack.Text = getText("Speed")
-    uiElements.Freecam.Text = getText("Freecam")
-    uiElements.FlyCarpet.Text = getText("FlyCarpet")
+local btnVie = Instance.new("TextButton")
+btnVie.Size = UDim2.new(0.46, 0, 0, 25); btnVie.Position = UDim2.new(0, 0, 0, 85); btnVie.BackgroundColor3 = Color3.fromRGB(35, 35, 35); btnVie.TextColor3 = Color3.fromRGB(255, 255, 255); btnVie.Text = "Tiếng Việt"; btnVie.Font = Enum.Font.SourceSansBold; btnVie.Parent = pages[5]
+registerTextLabel(btnVie)
+local vC = Instance.new("UICorner"); vC.CornerRadius = UDim.new(0, 4); vC.Parent = btnVie
+
+local btnEng = Instance.new("TextButton")
+btnEng.Size = UDim2.new(0.5, 0, 0, 25); btnEng.Position = UDim2.new(0.5, 0, 0, 85); btnEng.BackgroundColor3 = Color3.fromRGB(35, 35, 35); btnEng.TextColor3 = Color3.fromRGB(255, 255, 255); btnEng.Text = "English"; btnEng.Font = Enum.Font.SourceSansBold; btnEng.Parent = pages[5]
+registerTextLabel(btnEng)
+local eC = Instance.new("UICorner"); eC.CornerRadius = UDim.new(0, 4); eC.Parent = btnEng
+
+createSlider(pages[5], Translations[Flags.Language].FontSizeTitle, 10, 18, Flags.TextSize, 120, function(val)
+    Flags.TextSize = math.floor(val)
+    updateAllTextSizes()
+end)
+
+local authorLbl = Instance.new("TextLabel")
+authorLbl.Size = UDim2.new(0.96, 0, 0, 20); authorLbl.Position = UDim2.new(0.02, 0, 0, 170); authorLbl.BackgroundTransparency = 1; authorLbl.Text = Translations[Flags.Language].Author; authorLbl.Font = Enum.Font.SourceSansBold; authorLbl.TextColor3 = Color3.fromRGB(255, 215, 0); authorLbl.TextXAlignment = Enum.TextXAlignment.Left; authorLbl.Parent = pages[5]
+registerTextLabel(authorLbl)
+
+local fbLbl = Instance.new("TextLabel")
+fbLbl.Size = UDim2.new(0.96, 0, 0, 20); fbLbl.Position = UDim2.new(0.02, 0, 0, 195); fbLbl.BackgroundTransparency = 1; fbLbl.Text = Translations[Flags.Language].Facebook; fbLbl.Font = Enum.Font.SourceSansBold; fbLbl.TextColor3 = Color3.fromRGB(200, 200, 200); fbLbl.TextXAlignment = Enum.TextXAlignment.Left; authorLbl.Parent = pages[5]
+fbLbl.Parent = pages[5]
+registerTextLabel(fbLbl)
+
+local verLbl = Instance.new("TextLabel")
+verLbl.Size = UDim2.new(0.96, 0, 0, 20); verLbl.Position = UDim2.new(0.02, 0, 0, 220); verLbl.BackgroundTransparency = 1; verLbl.Text = Translations[Flags.Language].Version; verLbl.Font = Enum.Font.SourceSansBold; verLbl.TextColor3 = Color3.fromRGB(150, 150, 150); verLbl.TextXAlignment = Enum.TextXAlignment.Left; verLbl.Parent = pages[5]
+registerTextLabel(verLbl)
+
+local function refreshLanguage()
+    for i, name in ipairs(tabNames) do tabs[i].Text = Translations[Flags.Language][name] or name end
+    themeLbl.Text = Translations[Flags.Language].ThemeTitle
+    langLbl.Text = Translations[Flags.Language].LangTitle
+    authorLbl.Text = Translations[Flags.Language].Author
+    fbLbl.Text = Translations[Flags.Language].Facebook
+    verLbl.Text = Translations[Flags.Language].Version
 end
 
-local themeOptions = {"YellowBlack", "RedBlack", "GreenBlack", "PinkBlack"}
-local currentThemeIdx = 1
-local themeBtn = Instance.new("TextButton")
-themeBtn.Size = UDim2.new(1, 0, 0, 35)
-themeBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-themeBtn.Text = getText("ThemeTitle") .. ": " .. themeOptions[currentThemeIdx]
-themeBtn.TextColor3 = Themes[Flags.Theme].Text
-themeBtn.Font = Enum.Font.Gotham
-themeBtn.TextSize = 13
-themeBtn.Parent = pageSet
-local tCorner = Instance.new("UICorner"); tCorner.CornerRadius = UDim.new(0, 6); tCorner.Parent = themeBtn
-registerTextLabel(themeBtn)
-uiElements.ThemeTitle = themeBtn
+btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLanguage() end)
+btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
-themeBtn.MouseButton1Click:Connect(function()
-    currentThemeIdx = (currentThemeIdx % #themeOptions) + 1
-    Flags.Theme = themeOptions[currentThemeIdx]
-    themeBtn.Text = getText("ThemeTitle") .. ": " .. Flags.Theme
-    mainFrame.BackgroundColor3 = Themes[Flags.Theme].FrameBg
-    tabContainer.BackgroundColor3 = Themes[Flags.Theme].HeaderBg
-    contentContainer.BackgroundColor3 = Themes[Flags.Theme].InnerBg
-    titleLabel.TextColor3 = Themes[Flags.Theme].Accent
-    if Tabs[activeTab] then Tabs[activeTab].TextColor3 = Themes[Flags.Theme].Accent end
-end)
+--------------------------------------------------
+-- MỞ / TẮT MENU
+--------------------------------------------------
+local isMenuAnimating = false
+circleBtn.MouseButton1Click:Connect(function()
+    if isMenuAnimating then return end
+    isMenuAnimating = true
 
-local langBtn = Instance.new("TextButton")
-langBtn.Size = UDim2.new(1, 0, 0, 35)
-langBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-langBtn.Text = getText("LangTitle") .. ": " .. Flags.Language
-langBtn.TextColor3 = Themes[Flags.Theme].Text
-langBtn.Font = Enum.Font.Gotham
-langBtn.TextSize = 13
-langBtn.Parent = pageSet
-local lCorner = Instance.new("UICorner"); lCorner.CornerRadius = UDim.new(0, 6); lCorner.Parent = langBtn
-registerTextLabel(langBtn)
-uiElements.LangTitle = langBtn
-
-langBtn.MouseButton1Click:Connect(function()
-    Flags.Language = Flags.Language == "VIE" and "ENG" or "VIE"
-    langBtn.Text = getText("LangTitle") .. ": " .. Flags.Language
-    themeBtn.Text = getText("ThemeTitle") .. ": " .. Flags.Theme
-    updateLanguage()
-end)
-
-addSlider(pageSet, "3. Kích thước chữ (Text Size)", "TextSize", 10, 20, false, function() updateAllTextSizes() end)
-
-local layoutTab = Instance.new("UIListLayout")
-layoutTab.FillDirection = Enum.FillDirection.Horizontal
-layoutTab.SortOrder = Enum.SortOrder.LayoutOrder
-layoutTab.Parent = tabContainer
-
-tabMainBtn.Parent = tabContainer
-tabEspBtn.Parent = tabContainer
-tabAutoBtn.Parent = tabContainer
-tabExpBtn.Parent = tabContainer
-tabSetBtn.Parent = tabContainer
-
-activeTab = "Main"
-Tabs["Main"].TextColor3 = Themes[Flags.Theme].Accent
-Pages["Main"].Visible = true
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.E then
-        mainFrame.Visible = not mainFrame.Visible
-    end
-    
-    if isFreecamActive and Flags.FreecamSoul then
-        if input.KeyCode == Enum.KeyCode.Space then flyVerticalSpeed = 25 * Flags.SpeedMultiplier
-        elseif input.KeyCode == Enum.KeyCode.LeftControl then flyVerticalSpeed = -25 * Flags.SpeedMultiplier end
-    end
-    if Flags.FlyCarpet and not Flags.FreecamSoul then
-        if input.KeyCode == Enum.KeyCode.Space then flyVerticalSpeed = 20 * Flags.SpeedMultiplier
-        elseif input.KeyCode == Enum.KeyCode.LeftControl then flyVerticalSpeed = -20 * Flags.SpeedMultiplier end
+    if mainFrame.Visible then
+        local tweenClose = TweenService:Create(mainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Size = UDim2.new(0, 0, 0, 0) })
+        tweenClose:Play()
+        tweenClose.Completed:Connect(function() mainFrame.Visible = false; isMenuAnimating = false end)
+    else
+        mainFrame.Size = UDim2.new(0, 0, 0, 0); mainFrame.Visible = true
+        local tweenOpen = TweenService:Create(mainFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 520, 0, 280) })
+        tweenOpen:Play()
+        tweenOpen.Completed:Connect(function() isMenuAnimating = false end)
     end
 end)
-UserInputService.InputEnded:Connect(function(input, gp)
-    if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.LeftControl then flyVerticalSpeed = 0 end
+
+applyTheme()
+
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "MOTE HUB BETA 3.01",
+        Text = "Mote Hub ESP Fix Floor 1 & 2 Đã Sẵn Sàng!",
+        Duration = 4
+    })
 end)
