@@ -128,7 +128,7 @@ if not screenGui.Parent then
 end
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (ĐÃ BỔ SUNG CHUẨN LIVEHINT CHO SÁCH CỬA 50)[cite: 13]
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT[cite: 13]
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -169,24 +169,48 @@ local function getItemLabel(name)
     return nil
 end
 
+-- SỬA ESP CỬA: Chỉ nhận cửa có chữ số VD 001 hoặc A 0001, lọc bỏ hoàn toàn cửa giả/dupe
 local function isRealRoomDoor(obj)
-    if not obj or not obj:IsA("Model") then return false end
-    if obj.Name ~= "Door" and obj.Name ~= "DoorModel" then return false end
+    if not obj or not (obj:IsA("Model") or obj:IsA("BasePart")) then return false end
+    local name = obj.Name:lower()
+    if not name:find("door") and obj.Name ~= "Door" and obj.Name ~= "DoorModel" then 
+        return false 
+    end
     
+    -- Kiểm tra chống cửa giả / dupe
     for _, child in ipairs(obj:GetChildren()) do
         local cName = child.Name:lower()
         if cName:find("dupe") or cName:find("fake") then
             return false
         end
     end
+    local curr = obj.Parent
+    while curr and curr ~= Workspace do
+        local cName = curr.Name:lower()
+        if cName:find("dupe") or cName:find("fake") then
+            return false
+        end
+        curr = curr.Parent
+    end
     
-    if obj:FindFirstChild("Hidden") and not obj:FindFirstChild("Sign") and not obj:FindFirstChild("Lock") then
-        if obj.Parent and tonumber(obj.Parent.Name) then
-            return false 
+    -- Kiểm tra xem cửa có chứa chữ số định danh phòng (VD: 001 hoặc A 0001 hoặc thuộc phòng số)
+    local hasNumber = false
+    local checkStr = obj.Name
+    if obj.Parent then checkStr = checkStr .. " " .. obj.Parent.Name end
+    if obj:FindFirstChild("Sign") then checkStr = checkStr .. " " .. obj.Sign.Name end
+    
+    if checkStr:match("%d%d%d") or checkStr:match("A%s*%d+") or tonumber(obj.Parent and obj.Parent.Name) then
+        hasNumber = true
+    else
+        for _, d in ipairs(obj:GetDescendants()) do
+            if d:IsA("TextLabel") and (d.Text:match("%d") or d.Text:match("A%s*%d+")) then
+                hasNumber = true
+                break
+            end
         end
     end
     
-    return true
+    return hasNumber
 end
 
 --------------------------------------------------
@@ -465,6 +489,7 @@ local function getObjectPrompt(targetObj)
     return nil
 end
 
+-- Kiểm tra vật phẩm còn hợp lệ và chưa bị nhặt (quét liên tục)
 local function isItemValidAndUncollected(targetObj)
     if not targetObj or not targetObj.Parent or not targetObj:IsDescendantOf(Workspace) then
         return false
@@ -472,10 +497,15 @@ local function isItemValidAndUncollected(targetObj)
 
     local current = targetObj
     while current and current ~= Workspace do
-        if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) then
+        if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) or current:IsA("Backpack") then
             return false
         end
         current = current.Parent
+    end
+
+    local prompt = getObjectPrompt(targetObj)
+    if prompt and not prompt.Enabled then
+        return false
     end
 
     return true
@@ -585,7 +615,7 @@ local function createBillboard(targetObj, text, color, flagName)
 end
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ FIX ESP CỬA BẰNG WORKSPACE:GETDESCENDANTS)[cite: 13]
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ[cite: 13]
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -645,7 +675,18 @@ local function processObject(obj)
         if nameLower:find("giggle", 1, true) then detectedMonsterName = "Giggle"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("rushmoving", 1, true) or nameLower == "rush" then detectedMonsterName = "Rush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then detectedMonsterName = "Ambush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" or nameLower:find("seek", 1, true) then detectedMonsterName = "Seek"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        -- LỌC CHUẨN 100% SEEK THẬT: Loại bỏ tranh ảnh mắt/tay, chỉ nhận model Seek thực tế
+        elseif nameLower == "seek" or nameLower:find("seekmoving") or nameLower == "seekrig" then
+            local potentialModel = obj:IsA("Model") and obj or obj.Parent
+            if potentialModel and potentialModel:IsA("Model") then
+                local pName = potentialModel.Name:lower()
+                if not pName:find("painting") and not pName:find("portrait") and not pName:find("canvas") and not pName:find("frame") and not pName:find("picture") then
+                    if potentialModel:FindFirstChildOfClass("Humanoid") or potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("RootPart") or potentialModel:FindFirstChild("Head") then
+                        detectedMonsterName = "Seek"
+                        monsterModel = potentialModel
+                    end
+                end
+            end
         elseif nameLower == "screech" then detectedMonsterName = "Screech"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower == "eyes" or nameLower == "eyesmoving" then
             if not isPartOfOtherMonster(obj) then
@@ -669,7 +710,7 @@ local function processObject(obj)
             return
         end
 
-        -- QUÉT VẬT PHẨM & SÁCH CỬA 50 CHÍNH XÁC TUYỆT ĐỐI
+        -- QUÉT VẬT PHẨM & SÁCH CỬA 50
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
@@ -723,17 +764,18 @@ local function processObject(obj)
             createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
         end
 
-        if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) then
-            createBillboard(obj, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever")
+        -- SỬA ESP CẦN GẠT / CÔNG TẮC & BREAKER BOX
+        if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) or nameLower:find("fuse", 1, true) or nameLower:find("valve", 1, true) then
+            createBillboard(obj, "🕹️ Cần Gạt / Công Tắc", ESPColors.Lever, "ESPLever")
         end
 
-        if nameLower:find("chest", 1, true) or nameLower == "lootbox" then
+        -- SỬA ESP RƯƠNG ĐỒ (CHEST)
+        if nameLower:find("chest", 1, true) or nameLower == "lootbox" or nameLower:find("lootbox", 1, true) then
             createBillboard(obj, "📦 Rương Đồ", ESPColors.Chest, "ESPChest")
         end
     end)
 end
 
--- Quét toàn bộ Workspace ban đầu (Đã sửa lỗi không nhận diện cửa trong CurrentRooms)[cite: 13]
 task.spawn(function()
     pcall(function()
         for _, obj in ipairs(Workspace:GetDescendants()) do 
@@ -744,7 +786,7 @@ end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI[cite: 13]
+-- ESP NGƯỜI CHƠI (CHỈ HIGHLIGHT, TÊN, THANH MÁU, DÂY NỐI)[cite: 13]
 --------------------------------------------------
 local function getHealthColor(percent)
     if percent >= 0.9 then
@@ -815,12 +857,11 @@ local function setupFullPlayerESP(plr)
 
         bb.Parent = head
 
-        local box, line
+        local line
         if HasDrawing then
             pcall(function()
                 local DrawingLib = getGlobal("Drawing")
                 if DrawingLib and typeof(DrawingLib.new) == "function" then
-                    box = DrawingLib.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
                     line = DrawingLib.new("Line"); line.Visible = false; line.Thickness = 1.5
                 end
             end)
@@ -833,9 +874,6 @@ local function setupFullPlayerESP(plr)
                 if bb and bb.Parent then bb:Destroy() end
                 if HasDrawing then
                     pcall(function() 
-                        if box then 
-                            if typeof(box.Destroy) == "function" then box:Destroy() elseif typeof(box.Remove) == "function" then box:Remove() end
-                        end 
                         if line then 
                             if typeof(line.Destroy) == "function" then line:Destroy() elseif typeof(line.Remove) == "function" then line:Remove() end
                         end 
@@ -862,34 +900,27 @@ local function setupFullPlayerESP(plr)
                     healthFill.BackgroundColor3 = currentHealthColor
                 end
 
-                if HasDrawing and box then
+                if HasDrawing and line then
                     pcall(function()
                         local targetPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                         if onScreen then
-                            local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
-                            local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-                            local height = math.abs(headPos.Y - legPos.Y)
-                            local width = height / 1.5
-
-                            box.Size = Vector2.new(width, height)
-                            box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
-                            box.Visible = true
-                            
-                            if line then
-                                if localHrp then
-                                    local myPos, _ = Camera:WorldToViewportPoint(localHrp.Position)
+                            if localHrp then
+                                local myPos, myOnScreen = Camera:WorldToViewportPoint(localHrp.Position)
+                                if myOnScreen then
                                     line.From = Vector2.new(myPos.X, myPos.Y)
                                 else
                                     local viewportSize = Camera.ViewportSize
                                     line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
                                 end
-                                line.To = Vector2.new(targetPos.X, targetPos.Y)
-                                line.Color = currentHealthColor
-                                line.Visible = true
+                            else
+                                local viewportSize = Camera.ViewportSize
+                                line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
                             end
+                            line.To = Vector2.new(targetPos.X, targetPos.Y)
+                            line.Color = currentHealthColor
+                            line.Visible = true
                         else
-                            box.Visible = false
-                            if line then line.Visible = false end
+                            line.Visible = false
                         end
                     end)
                 end
@@ -897,7 +928,6 @@ local function setupFullPlayerESP(plr)
                 hl.Enabled = false; bb.Enabled = false
                 if HasDrawing then
                     pcall(function() 
-                        if box then box.Visible = false end
                         if line then line.Visible = false end
                     end)
                 end
@@ -1305,7 +1335,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Đã fix lỗi ESP Cửa không hiển thị trong CurrentRooms!",
+        Text = "Đã fix lỗi ESP Cửa, Rương, Cần gạt, Seek và Dây nối người chơi!",
         Duration = 4
     })
 end)
