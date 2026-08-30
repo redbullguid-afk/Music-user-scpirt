@@ -1,19 +1,19 @@
 -- ==================================================
--- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)[cite: 12]
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)[cite: 13]
 -- ==================================================
 
-local Players = game:GetService("Players")
-local VirtualUser = game:GetService("VirtualUser")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local Lighting = game:GetService("Lighting")
-local CoreGui = game:GetService("CoreGui")
-local StarterGui = game:GetService("StarterGui")
-local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")[cite: 13]
+local VirtualUser = game:GetService("VirtualUser")[cite: 13]
+local UserInputService = game:GetService("UserInputService")[cite: 13]
+local RunService = game:GetService("RunService")[cite: 13]
+local Workspace = game:GetService("Workspace")[cite: 13]
+local Lighting = game:GetService("Lighting")[cite: 13]
+local CoreGui = game:GetService("CoreGui")[cite: 13]
+local StarterGui = game:GetService("StarterGui")[cite: 13]
+local TweenService = game:GetService("TweenService")[cite: 13]
 
-local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer[cite: 13]
+local Camera = Workspace.CurrentCamera[cite: 13]
 
 local function getGlobal(name)
     local success, val = pcall(function()
@@ -29,7 +29,7 @@ local function getGlobal(name)
     end)
     if success and val ~= nil then return val end
     return nil
-end
+end[cite: 13]
 
 local HasDrawing = false
 pcall(function()
@@ -37,10 +37,10 @@ pcall(function()
     if drawingLib and typeof(drawingLib.new) == "function" then
         HasDrawing = true
     end
-end)
+end)[cite: 13]
 
 --------------------------------------------------
--- CẤU HÌNH TRẠNG THÁI (FLAGS)
+-- CẤU HÌNH TRẠNG THÁI (FLAGS)[cite: 13]
 --------------------------------------------------
 local Flags = {
     AntiAFK = true,
@@ -69,7 +69,7 @@ local Flags = {
     Language = "VIE",
     Theme = "YellowBlack",
     TextSize = 13
-}
+}[cite: 13]
 
 local OriginalLighting = {
     Brightness = Lighting.Brightness,
@@ -78,17 +78,17 @@ local OriginalLighting = {
     GlobalShadows = Lighting.GlobalShadows,
     Ambient = Lighting.Ambient,
     OutdoorAmbient = Lighting.OutdoorAmbient
-}
+}[cite: 13]
 
 --------------------------------------------------
--- PALETTE MÀU THEME MENU & MÀU ESP
+-- PALETTE MÀU THEME MENU & MÀU ESP[cite: 13]
 --------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     RedBlack    = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     GreenBlack  = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     PinkBlack   = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
-}
+}[cite: 13]
 
 local ESPColors = {
     Monster = Color3.fromRGB(255, 40, 40),
@@ -97,15 +97,15 @@ local ESPColors = {
     Chest   = Color3.fromRGB(200, 100, 255),
     Items   = Color3.fromRGB(0, 255, 255),
     Player  = Color3.fromRGB(255, 140, 0)
-}
+}[cite: 13]
 
 local Translations = {
     VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", Admin = "Admin", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối (Fixed)", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.01 (Fixed)" },
     ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", Admin = "Admin", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright (Fixed)", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.01 (Fixed)" }
-}
+}[cite: 13]
 
 --------------------------------------------------
--- GIAO DIỆN MÀN HÌNH CHÍNH
+-- GIAO DIỆN MÀN HÌNH CHÍNH[cite: 13]
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta301"
@@ -125,10 +125,10 @@ if not screenGui.Parent then
     pcall(function()
         screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     end)
-end
+end[cite: 13]
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT[cite: 13]
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -144,7 +144,7 @@ local ImportantItems = {
     ["beer"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["beerglass"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["pint"] = "🍺 Cốc Bia (Phòng Gạt Cần)"
-}
+}[cite: 13]
 
 local MonsterAdvice = {
     ["Rush"] = "Trốn vô tủ mau!", ["Ambush"] = "Trốn vô tủ mau!", ["Seek"] = "Chuẩn bị chạy trốn Seek!",
@@ -152,7 +152,7 @@ local MonsterAdvice = {
     ["Figure"] = "Đi cúi người (Crouch), giữ khoảng cách!", ["Hide"] = "Rời khỏi tủ ngay!", ["Jack"] = "Chờ 1 chút rồi mở lại tủ!",
     ["Timothy"] = "Nhện giật mình trong hộc bàn!", ["Dread"] = "Mở cửa tiến lên phía trước mau!", ["A-60"] = "Trốn vô tủ ngay!", ["A-120"] = "Trốn vô tủ ngay!",
     ["Giggle"] = "Nhìn lên trần nhà và ném Glowstick!", ["Grumble"] = "Chạy thật nhanh, tránh đường cụt!", ["Gloombat"] = "Tắt đèn, đừng soi đèn vào bầy dơi!"
-}
+}[cite: 13]
 
 local function getItemLabel(name)
     if not name or name == "" then return nil end
@@ -164,7 +164,7 @@ local function getItemLabel(name)
         end
     end
     return nil
-end
+end[cite: 13]
 
 local function isRealRoomDoor(obj)
     if not obj or not obj:IsA("Model") then return false end
@@ -177,19 +177,19 @@ local function isRealRoomDoor(obj)
         if obj.Parent and tonumber(obj.Parent.Name) then return false end
     end
     return true
-end
+end[cite: 13]
 
 --------------------------------------------------
--- HỆ THỐNG FONT SIZE REAL-TIME
+-- HỆ THỐNG FONT SIZE REAL-TIME[cite: 13]
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label) table.insert(TextSizeRegister, label); label.TextSize = Flags.TextSize end
 local function updateAllTextSizes()
     for _, lbl in ipairs(TextSizeRegister) do if lbl and lbl.Parent then lbl.TextSize = Flags.TextSize end end
-end
+end[cite: 13]
 
 --------------------------------------------------
--- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT
+-- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT[cite: 13]
 --------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
@@ -198,10 +198,10 @@ local function safeInteract(prompt)
         if fpp then fpp(prompt) else prompt:InputHoldBegin(); task.wait(prompt.HoldDuration or 0.1); prompt:InputHoldEnd() end
     end)
     return true
-end
+end[cite: 13]
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ & AUTO LOOT
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT[cite: 13]
 --------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
@@ -249,10 +249,10 @@ task.spawn(function()
             end)
         end
     end
-end)
+end)[cite: 13]
 
 --------------------------------------------------
--- LOGIC AUTO MỞ CỬA BẰNG KEY
+-- LOGIC AUTO MỞ CỬA BẰNG KEY[cite: 13]
 --------------------------------------------------
 task.spawn(function()
     while task.wait(0.2) do
@@ -279,10 +279,10 @@ task.spawn(function()
             end)
         end
     end
-end)
+end)[cite: 13]
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM
+-- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM[cite: 13]
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
@@ -318,7 +318,7 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
     end
-end)
+end)[cite: 13]
 
 local flyBodyVel, flyBodyGyro = nil, nil
 local flyVerticalSpeed = 0
@@ -347,7 +347,7 @@ RunService.RenderStepped:Connect(function()
         if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
         if not Flags.FreecamSoul then flyVerticalSpeed = 0 end
     end
-end)
+end)[cite: 13]
 
 local freecamPart = nil
 local isFreecamActive = false
@@ -381,7 +381,7 @@ local function setFreecamState(state)
         Camera.CameraType = Enum.CameraType.Custom
         if freecamPart then freecamPart:Destroy(); freecamPart = nil end
     end
-end
+end[cite: 13]
 
 RunService.RenderStepped:Connect(function(dt)
     if isFreecamActive and freecamPart and LocalPlayer.Character then
@@ -392,10 +392,10 @@ RunService.RenderStepped:Connect(function(dt)
         local verticalMove = Vector3.new(0, flyVerticalSpeed, 0) * dt
         freecamPart.Position = freecamPart.Position + (horizontalMove * speed * dt) + verticalMove
     end
-end)
+end)[cite: 13]
 
 --------------------------------------------------
--- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG[cite: 13]
 --------------------------------------------------
 local TrackedESPs = setmetatable({}, { __mode = "k" })
 
@@ -508,10 +508,10 @@ local function createBillboard(targetObj, text, color, flagName)
         end
         cleanESP()
     end)
-end
+end[cite: 13]
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ[cite: 13]
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -619,10 +619,10 @@ local function processObject(obj)
 end
 
 task.spawn(function() pcall(function() for _, obj in ipairs(Workspace:GetChildren()) do processObject(obj); for _, child in ipairs(obj:GetChildren()) do processObject(child) end end end) end)
-Workspace.DescendantAdded:Connect(processObject)
+Workspace.DescendantAdded:Connect(processObject)[cite: 13]
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- ESP NGƯỜI CHƠI[cite: 13]
 --------------------------------------------------
 local function getHealthColor(percent)
     if percent >= 0.9 then return Color3.fromRGB(50, 255, 50) elseif percent >= 0.7 then return Color3.fromRGB(34, 139, 34) elseif percent >= 0.4 then return Color3.fromRGB(255, 255, 0) elseif percent >= 0.2 then return Color3.fromRGB(255, 140, 0) else return Color3.fromRGB(255, 50, 50) end
@@ -722,10 +722,10 @@ local function setupFullPlayerESP(plr)
     plr.CharacterAdded:Connect(applyESPToCharacter)
 end
 for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
-Players.PlayerAdded:Connect(setupFullPlayerESP)
+Players.PlayerAdded:Connect(setupFullPlayerESP)[cite: 13]
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT
+-- ANTI-AFK & FULLBRIGHT[cite: 13]
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function() if Flags.AntiAFK then pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end end)
@@ -762,10 +762,10 @@ task.spawn(function()
             end)
         end
     end
-end)
+end)[cite: 13]
 
 --------------------------------------------------
--- GIAO DIỆN MOTE HUB
+-- GIAO DIỆN MOTE HUB[cite: 13]
 --------------------------------------------------
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
@@ -960,13 +960,13 @@ btnDown.MouseButton1Down:Connect(function() flyVerticalSpeed = -25 end)
 btnDown.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
 local function updateFlyControlVisibility() flyControlFrame.Visible = Flags.FlyCarpet or Flags.FreecamSoul end
 
--- TAB 1
+-- TAB 1[cite: 13]
 createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
 createToggleSwitch(pages[1], Translations[Flags.Language].MonsterNotify, "MonsterNotify", 40)
 createToggleSwitch(pages[1], Translations[Flags.Language].Fullbright, "SmartFullbright", 75)
 createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 110, function(val) Flags.FullbrightIntensity = val end)
 
--- TAB 2
+-- TAB 2[cite: 13]
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
 createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Tủ, Kệ, Rương, Hộp)", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Floor 2)", "ESPMonster", 75)
@@ -974,11 +974,11 @@ createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 1
 createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
 createToggleSwitch(pages[2], "🟠 ESP Người Chơi", "ESPPlayer", 180)
 
--- TAB 3
+-- TAB 3[cite: 13]
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDrawers, "AutoDrawersLoot", 5)
 createToggleSwitch(pages[3], Translations[Flags.Language].AutoDoorKey, "AutoKeyDoor", 40)
 
--- TAB 4
+-- TAB 4[cite: 13]
 createToggleSwitch(pages[4], Translations[Flags.Language].NoClip, "NoClip", 5)
 createToggleSwitch(pages[4], Translations[Flags.Language].Jump, "DoorsJump", 40, function(st) jumpButtonUI.Visible = st end)
 createToggleSwitch(pages[4], Translations[Flags.Language].Speed, "SpeedHack", 75)
@@ -987,7 +987,7 @@ createToggleSwitch(pages[4], "🛡️ Anti Rubberband (Chống Giật Về)", "A
 createToggleSwitch(pages[4], Translations[Flags.Language].Freecam, "FreecamSoul", 190, function(st) setFreecamState(st); updateFlyControlVisibility() end)
 createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet", 225, function(st) updateFlyControlVisibility() end)
 
--- TAB 5
+-- TAB 5[cite: 13]
 local themeLbl = Instance.new("TextLabel")
 themeLbl.Size = UDim2.new(0.96, 0, 0, 20); themeLbl.Position = UDim2.new(0.02, 0, 0, 5); themeLbl.BackgroundTransparency = 1; themeLbl.Text = Translations[Flags.Language].ThemeTitle; themeLbl.Font = Enum.Font.SourceSansBold; themeLbl.TextColor3 = Color3.fromRGB(255, 255, 255); themeLbl.TextXAlignment = Enum.TextXAlignment.Left; themeLbl.Parent = pages[5]
 registerTextLabel(themeLbl)
@@ -1031,20 +1031,22 @@ local verLbl = Instance.new("TextLabel")
 verLbl.Size = UDim2.new(0.96, 0, 0, 20); verLbl.Position = UDim2.new(0.02, 0, 0, 220); verLbl.BackgroundTransparency = 1; verLbl.Text = Translations[Flags.Language].Version; verLbl.Font = Enum.Font.SourceSansBold; verLbl.TextColor3 = Color3.fromRGB(150, 150, 150); verLbl.TextXAlignment = Enum.TextXAlignment.Left; verLbl.Parent = pages[5]
 registerTextLabel(verLbl)
 
--- TAB 6: ADMIN
+--------------------------------------------------
+-- TAB 6: ADMIN (ĐÃ THÊM TÍNH NĂNG MỚI)[cite: 13]
+--------------------------------------------------
 local adminTitle = Instance.new("TextLabel")
-adminTitle.Size = UDim2.new(0.96, 0, 0, 20); adminTitle.Position = UDim2.new(0.02, 0, 0, 5); adminTitle.BackgroundTransparency = 1; adminTitle.Text = "DANH SÁCH THỰC THỂ (CHỈ TÁC DỤNG CLIENT)"; adminTitle.Font = Enum.Font.SourceSansBold; adminTitle.TextColor3 = Color3.fromRGB(255, 215, 0); adminTitle.TextXAlignment = Enum.TextXAlignment.Left; adminTitle.Parent = pages[6]
+adminTitle.Size = UDim2.new(0.96, 0, 0, 20); adminTitle.Position = UDim2.new(0.02, 0, 0, 5); adminTitle.BackgroundTransparency = 1; adminTitle.Text = "DANH SÁCH THỰC THỂ & ĐỒNG ĐỘI (CHỈ TÁC DỤNG CLIENT)"; adminTitle.Font = Enum.Font.SourceSansBold; adminTitle.TextColor3 = Color3.fromRGB(255, 215, 0); adminTitle.TextXAlignment = Enum.TextXAlignment.Left; adminTitle.Parent = pages[6]
 registerTextLabel(adminTitle)
 
-local entityContainer = Instance.new("Frame")
-entityContainer.Size = UDim2.new(0.96, 0, 0, 200); entityContainer.Position = UDim2.new(0.02, 0, 0, 30); entityContainer.BackgroundTransparency = 1; entityContainer.Parent = pages[6]
+local entityContainer = Instance.new("ScrollingFrame")
+entityContainer.Size = UDim2.new(0.96, 0, 0, 210); entityContainer.Position = UDim2.new(0.02, 0, 0, 30); entityContainer.BackgroundTransparency = 1; entityContainer.ScrollBarThickness = 4; entityContainer.CanvasSize = UDim2.new(0, 0, 0, 260); entityContainer.Parent = pages[6]
 
 local gridLayout = Instance.new("UIGridLayout")
 gridLayout.CellSize = UDim2.new(0, 140, 0, 30); gridLayout.CellPadding = UDim2.new(0, 10, 0, 10); gridLayout.Parent = entityContainer
 
 local entitiesToSummon = {"Rush", "Ambush", "Seek", "Figure", "Eyes", "Halt", "Screech", "A-60", "A-120", "Giggle", "Grumble", "Gloombat"}
 
--- HÀM TRIỆU HỒI THỰC THỂ THẬT (GIỮ NGUYÊN HÌNH DÁNG VÀ LỐI CHƠI)
+-- HÀM TRIỆU HỒI ĐÃ ĐƯỢC SỬA LỖI & MÔ PHỎNG TỰ NHIÊN[cite: 13]
 local function summonEntityLocally(entityName)
     local rs = game:GetService("ReplicatedStorage")
     local ts = game:GetService("TweenService")
@@ -1057,51 +1059,31 @@ local function summonEntityLocally(entityName)
         return 
     end
     
-    pcall(function() StarterGui:SetCore("SendNotification", {Title = "Triệu Hồi", Text = "Đang triệu hồi thực thể: " .. entityName .. "...", Duration = 3}) end)
+    pcall(function() StarterGui:SetCore("SendNotification", {Title = "Triệu Hồi", Text = "Đang gọi " .. entityName .. "...", Duration = 3}) end)
     
-    -- Tìm kiếm mô hình gốc của thực thể trong game (ReplicatedStorage hoặc Workspace)
-    local foundModel = nil
-    
-    for _, obj in ipairs(rs:GetDescendants()) do
-        if obj:IsA("Model") and (obj.Name:lower() == entityName:lower() or obj.Name:lower():find(entityName:lower())) then
-            foundModel = obj
-            break
-        end
-    end
-    
-    if not foundModel then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Model") and (obj.Name:lower() == entityName:lower() or obj.Name:lower():find(entityName:lower())) then
-                foundModel = obj
-                break
-            end
-        end
-    end
-    
+    local model = rs:FindFirstChild(entityName, true) or Workspace:FindFirstChild(entityName, true)
     local clone = nil
-    if foundModel then
-        clone = foundModel:Clone()
+    
+    if model and model:IsA("Model") then
+        clone = model:Clone()
     else
-        -- Fallback: Tạo mô hình chuẩn nếu không trích xuất được asset gốc
         clone = Instance.new("Model")
         clone.Name = entityName
         local mainPart = Instance.new("Part")
         mainPart.Name = "HumanoidRootPart"
         mainPart.Size = Vector3.new(4, 5, 4)
-        mainPart.Transparency = 0.5
-        mainPart.Color = Color3.fromRGB(255, 0, 0)
+        mainPart.Color = Color3.fromRGB(0, 0, 0)
         mainPart.Material = Enum.Material.Neon
         mainPart.Parent = clone
         clone.PrimaryPart = mainPart
         
-        local hl = Instance.new("Highlight")
-        hl.FillColor = Color3.fromRGB(255, 0, 0)
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.Parent = clone
+        local highlight = Instance.new("Highlight")
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.Parent = clone
     end
     
     if clone then
-        -- Vô hiệu hóa va chạm và bật neo để mô phỏng mượt mà trên Client
         for _, part in ipairs(clone:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.Anchored = true
@@ -1113,10 +1095,9 @@ local function summonEntityLocally(entityName)
         
         local rootPart = clone.PrimaryPart or clone:FindFirstChild("HumanoidRootPart") or clone:FindFirstChildWhichIsA("BasePart")
         if rootPart then
-            -- Tự động tính toán hướng di chuyển từ các ngóc ngách đến vị trí người chơi
             local lookVector = hrp.CFrame.LookVector
-            local startCFrame = CFrame.new(hrp.Position - (lookVector * 180), hrp.Position)
-            local endCFrame = CFrame.new(hrp.Position + (lookVector * 180), hrp.Position + (lookVector * 300))
+            local startCFrame = CFrame.new(hrp.Position - (lookVector * 150), hrp.Position)
+            local endCFrame = CFrame.new(hrp.Position + (lookVector * 150), hrp.Position + (lookVector * 300))
             
             if clone.PrimaryPart then
                 clone:SetPrimaryPartCFrame(startCFrame)
@@ -1124,14 +1105,9 @@ local function summonEntityLocally(entityName)
                 rootPart.CFrame = startCFrame
             end
             
-            -- Tốc độ lao qua các ngóc ngách tương ứng từng loại thực thể
-            local speed = 100
-            local lowerName = entityName:lower()
-            if lowerName:find("rush") or lowerName:find("ambush") or lowerName:find("a-60") or lowerName:find("a-120") then
-                speed = 160
-            elseif lowerName:find("seek") or lowerName:find("figure") or lowerName:find("grumble") then
-                speed = 50
-            end
+            local speed = 80
+            if entityName == "Rush" or entityName == "Ambush" or entityName == "A-60" then speed = 150 end
+            if entityName == "Seek" or entityName == "Figure" then speed = 40 end
             
             local dist = (endCFrame.Position - startCFrame.Position).Magnitude
             local tweenInfo = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear)
@@ -1144,8 +1120,9 @@ local function summonEntityLocally(entityName)
             end)
         end
     end
-end
+end[cite: 13]
 
+-- Tạo nút bấm triệu hồi thực thể[cite: 13]
 for _, ent in ipairs(entitiesToSummon) do
     local summonBtn = Instance.new("TextButton")
     summonBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); summonBtn.TextColor3 = Color3.fromRGB(255, 255, 255); summonBtn.Text = "👻 " .. ent; summonBtn.Font = Enum.Font.SourceSansBold; summonBtn.Parent = entityContainer
@@ -1153,6 +1130,51 @@ for _, ent in ipairs(entitiesToSummon) do
     local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(0, 4); btnCorner.Parent = summonBtn
     
     summonBtn.MouseButton1Click:Connect(function() summonEntityLocally(ent) end)
+end
+
+-- Chức năng 1: Hồi sinh tất cả đồng đội (Client)
+local function reviveAllTeammates()
+    pcall(function()
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.Health <= 0 then
+                    humanoid.Health = humanoid.MaxHealth
+                end
+            end
+        end
+        StarterGui:SetCore("SendNotification", {Title = "Admin", Text = "Đã hồi sinh tất cả đồng đội (Client)!", Duration = 3})
+    end)
+end
+
+-- Chức năng 2: Giết tất cả đồng đội (Client)
+local function killAllTeammates()
+    pcall(function()
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character then
+                local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    humanoid.Health = 0
+                end
+            end
+        end
+        StarterGui:SetCore("SendNotification", {Title = "Admin", Text = "Đã hạ gục tất cả đồng đội (Client)!", Duration = 3})
+    end)
+end
+
+-- Thêm 2 nút bấm mới với đúng giao diện và kiểu dáng như nút triệu hồi thực thể
+local adminActions = {
+    {Text = "💊 Hồi Sinh Team", Func = reviveAllTeammates},
+    {Text = "💀 Giết Team", Func = killAllTeammates}
+}
+
+for _, action in ipairs(adminActions) do
+    local actionBtn = Instance.new("TextButton")
+    actionBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255); actionBtn.Text = action.Text; actionBtn.Font = Enum.Font.SourceSansBold; actionBtn.Parent = entityContainer
+    registerTextLabel(actionBtn)
+    local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(0, 4); btnCorner.Parent = actionBtn
+    
+    actionBtn.MouseButton1Click:Connect(action.Func)
 end
 
 local function refreshLanguage()
@@ -1164,7 +1186,7 @@ btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLangu
 btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
 --------------------------------------------------
--- MỞ / TẮT MENU
+-- MỞ / TẮT MENU[cite: 13]
 --------------------------------------------------
 local isMenuAnimating = false
 circleBtn.MouseButton1Click:Connect(function()
@@ -1188,7 +1210,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01 (W ADMIN)",
-        Text = "Đã cập nhật hệ thống Triệu Hồi Thực Thể Thật!",
+        Text = "Đã cập nhật tính năng Hồi Sinh & Giết Team trong tab Admin!",
         Duration = 4
     })
 end)
