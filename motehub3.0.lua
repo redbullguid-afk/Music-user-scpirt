@@ -179,6 +179,34 @@ local function isRealRoomDoor(obj)
     return true
 end
 
+-- Hàm kiểm tra sách có bìa mặt trăng ở phòng 50
+local function isMoonBook(obj)
+    if not obj then return false end
+    local model = obj:IsA("Model") and obj or obj.Parent
+    local isBook = false
+    if obj.Name:lower():find("book") or (model and model.Name:lower():find("book")) then
+        isBook = true
+    end
+    if not isBook then return false end
+
+    local target = model or obj
+    for _, desc in ipairs(target:GetDescendants()) do
+        if desc:IsA("Decal") or desc:IsA("Texture") then
+            if desc.Name:lower():find("moon") or desc.Texture:lower():find("moon") then
+                return true
+            end
+        elseif desc:IsA("BasePart") and desc.Name:lower():find("moon") then
+            return true
+        end
+    end
+    for _, val in pairs(target:GetAttributes()) do
+        if tostring(val):lower():find("moon") then
+            return true
+        end
+    end
+    return false
+end
+
 --------------------------------------------------
 -- HỆ THỐNG FONT SIZE REAL-TIME
 --------------------------------------------------
@@ -582,6 +610,15 @@ local function processObject(obj)
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
+
+        -- Lọc chỉ hiển thị ESP sách có bìa mặt trăng ở phòng 50
+        if itemLabel == "📖 Sách (Cửa 50)" or nameLower:find("book") then
+            if not isMoonBook(obj) then
+                itemLabel = nil
+            else
+                itemLabel = "📖 Sách Mặt Trăng"
+            end
+        end
 
         local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
         if not prompt and obj.Parent then prompt = obj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true) end
@@ -1107,7 +1144,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01 (W ADMIN)",
-        Text = "Đã thêm Tab Admin & Chức năng Triệu Hồi!",
+        Text = "Đã lọc chỉ hiển thị Sách Mặt Trăng ở Cửa 50!",
         Duration = 4
     })
 end)
