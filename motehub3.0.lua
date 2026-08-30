@@ -1,6 +1,6 @@
 -- ==================================================
--- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)
--- ==================================================[cite: 12]
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)[cite: 12, 13]
+-- ==================================================
 
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
@@ -40,7 +40,7 @@ pcall(function()
 end)
 
 --------------------------------------------------
--- CẤU HÌNH TRẠNG THÁI (FLAGS)
+-- CẤU HÌNH TRẠNG THÁI (FLAGS)[cite: 13]
 --------------------------------------------------
 local Flags = {
     AntiAFK = true,
@@ -81,7 +81,7 @@ local OriginalLighting = {
 }
 
 --------------------------------------------------
--- PALETTE MÀU THEME MENU & MÀU ESP
+-- PALETTE MÀU THEME MENU & MÀU ESP[cite: 13]
 --------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
@@ -105,7 +105,7 @@ local Translations = {
 }
 
 --------------------------------------------------
--- GIAO DIỆN MÀN HÌNH CHÍNH (SAFE PARENTING CHO MOBILE)
+-- GIAO DIỆN MÀN HÌNH CHÍNH (SAFE PARENTING CHO MOBILE)[cite: 13]
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta301"
@@ -128,7 +128,7 @@ if not screenGui.Parent then
 end
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (ĐÃ BỔ SUNG CHUẨN LIVEHINT CHO SÁCH CỬA 50)
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (ĐÃ BỔ SUNG CHUẨN LIVEHINT CHO SÁCH CỬA 50)[cite: 13]
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -140,7 +140,7 @@ local ImportantItems = {
     ["laserpointer"] = "🔴 Đèn Laser", ["alarmclock"] = "⏰ Đồng Hồ Báo Thức", ["compass"] = "🧭 La Bàn",
     ["strafe"] = "🌟 Bình Starlight", ["pickaxe"] = "⛏️ Cuốc",
     ["book"] = "📖 Sách (Cửa 50)",
-    ["livehint"] = "📖 Sách (Cửa 50)", -- Model chuẩn của sách phòng thư viện Cửa 50 trong DOORS
+    ["livehint"] = "📖 Sách (Cửa 50)",
     ["fuse"] = "⚡ Cầu Chì (Cửa 100 / Floor 2)",
     ["beer"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["beerglass"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
@@ -190,7 +190,7 @@ local function isRealRoomDoor(obj)
 end
 
 --------------------------------------------------
--- HỆ THỐNG FONT SIZE REAL-TIME
+-- HỆ THỐNG FONT SIZE REAL-TIME[cite: 13]
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
@@ -204,7 +204,7 @@ local function updateAllTextSizes()
 end
 
 --------------------------------------------------
--- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT
+-- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT[cite: 13]
 --------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
@@ -222,7 +222,7 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ & AUTO LOOT
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT[cite: 13]
 --------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
@@ -274,7 +274,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC AUTO MỞ CỬA BẰNG KEY
+-- LOGIC AUTO MỞ CỬA BẰNG KEY[cite: 13]
 --------------------------------------------------
 task.spawn(function()
     while task.wait(0.2) do
@@ -305,7 +305,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM
+-- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM[cite: 13]
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
@@ -438,7 +438,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG[cite: 13]
 --------------------------------------------------
 local TrackedESPs = setmetatable({}, { __mode = "k" })
 
@@ -585,7 +585,7 @@ local function createBillboard(targetObj, text, color, flagName)
 end
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ FIX LỖI SÁCH CỬA 50 & CHỐNG BỊ TRÙNG LUNG)
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ FIX ESP CỬA BẰNG WORKSPACE:GETDESCENDANTS)[cite: 13]
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -674,7 +674,6 @@ local function processObject(obj)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
 
-        -- Bắt buộc phải có ProximityPrompt hợp lệ đối với vật phẩm để tránh nhận nhầm đồ trang trí/môi trường (chống chỉ tùng lung)
         local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
         if not prompt and obj.Parent then
             prompt = obj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
@@ -685,7 +684,6 @@ local function processObject(obj)
             local objObjName = obj.Name:lower()
             local parentObjName = (obj.Parent and obj.Parent.Name:lower()) or ""
             
-            -- Chỉ chấp nhận các prompt có hành động lấy vật phẩm, hoặc đích danh là sách Cửa 50 (LiveHint / Book)
             if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") or act:find("claim") or act:find("read") or objObjName == "livehint" or parentObjName == "livehint" then
                 if not itemLabel then
                     if not (objObjName:find("drawer") or objObjName:find("chest") or objObjName:find("toolbox") or objObjName:find("shelf") or objObjName:find("closet") or objObjName:find("knob")) then
@@ -693,11 +691,9 @@ local function processObject(obj)
                     end
                 end
             else
-                -- Bỏ qua nếu prompt không thuộc dạng nhặt đồ
                 return
             end
         else
-            -- Nếu không có ProximityPrompt thì chỉ cho phép nếu đúng là LiveHint (sách Cửa 50) hoặc ImportantItems định nghĩa rõ
             if obj.Name ~= "LiveHint" and not ImportantItems[obj.Name:lower()] then
                 return
             end
@@ -737,21 +733,18 @@ local function processObject(obj)
     end)
 end
 
--- Quét Workspace ban đầu
+-- Quét toàn bộ Workspace ban đầu (Đã sửa lỗi không nhận diện cửa trong CurrentRooms)[cite: 13]
 task.spawn(function()
     pcall(function()
-        for _, obj in ipairs(Workspace:GetChildren()) do 
+        for _, obj in ipairs(Workspace:GetDescendants()) do 
             processObject(obj)
-            for _, child in ipairs(obj:GetChildren()) do
-                processObject(child)
-            end
         end
     end)
 end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI
+-- ESP NGƯỜI CHƠI[cite: 13]
 --------------------------------------------------
 local function getHealthColor(percent)
     if percent >= 0.9 then
@@ -920,7 +913,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT
+-- ANTI-AFK & FULLBRIGHT[cite: 13]
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -983,7 +976,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN MOTE HUB
+-- GIAO DIỆN MOTE HUB[cite: 13]
 --------------------------------------------------
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
@@ -1288,7 +1281,7 @@ btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLangu
 btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
 --------------------------------------------------
--- MỞ / TẮT MENU
+-- MỞ / TẮT MENU[cite: 13]
 --------------------------------------------------
 local isMenuAnimating = false
 circleBtn.MouseButton1Click:Connect(function()
@@ -1312,7 +1305,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Đã fix lỗi ESP Sách Cửa 50 & Lọc chuẩn vật phẩm!",
+        Text = "Đã fix lỗi ESP Cửa không hiển thị trong CurrentRooms!",
         Duration = 4
     })
 end)
