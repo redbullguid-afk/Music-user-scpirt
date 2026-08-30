@@ -143,7 +143,7 @@ local function isContainerOrLocker(obj)
     local current = obj
     while current and current ~= Workspace do
         local n = current.Name:lower()
-        if n:find("drawer") or n:find("chest") or n:find("lootbox") or n:find("locker") or n:find("cabinet") or n:find("wardrobe") or n:find("door") or n:find("lock") or n:find("shelf") or n:find("table") or n:find("dupe") or n:find("bookshelf") or n:find("keyboard") then
+        if n:find("drawer") or n:find("chest") or n:find("lootbox") or n:find("locker") or n:find("cabinet") or n:find("wardrobe") or n:find("lock") or n:find("shelf") or n:find("table") or n:find("dupe") or n:find("bookshelf") or n:find("keyboard") then
             return true
         end
         current = current.Parent
@@ -248,8 +248,8 @@ task.spawn(function()
                 
                 if hrp and hasKey then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if obj.Name == "Door" and obj:IsA("Model") then
-                            local nameLower = obj.Name:lower()
+                        local nameLower = obj.Name:lower()
+                        if (obj.Name == "Door" or nameLower == "doormodel" or (nameLower:find("door") and not isContainerOrLocker(obj))) and obj:IsA("Model") then
                             if not nameLower:find("dupe", 1, true) and not obj:FindFirstChild("DupeDoor") then
                                 local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
                                 if doorPart then
@@ -586,6 +586,18 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     end)
 end
 
+local function isPartOfOtherMonster(targetObj)
+    local current = targetObj.Parent
+    while current and current ~= Workspace do
+        local n = current.Name:lower()
+        if n:find("seek") or n:find("giggle") or n:find("gloombat") or n:find("grumble") or n:find("figure") or n:find("rush") or n:find("ambush") or n:find("halt") or n:find("screech") then
+            return true
+        end
+        current = current.Parent
+    end
+    return false
+end
+
 local function processObject(obj)
     pcall(function()
         if not obj or not obj.Parent then return end
@@ -597,11 +609,12 @@ local function processObject(obj)
         if nameLower:find("giggle", 1, true) then detectedMonsterName = "Giggle"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("rushmoving", 1, true) or nameLower == "rush" then detectedMonsterName = "Rush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then detectedMonsterName = "Ambush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" then detectedMonsterName = "Seek"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" or nameLower:find("seek", 1, true) then detectedMonsterName = "Seek"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower == "screech" then detectedMonsterName = "Screech"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower == "eyes" or nameLower == "eyesmoving" then
-            local pName = obj.Parent and obj.Parent.Name:lower() or ""
-            if not pName:find("giggle", 1, true) then detectedMonsterName = "Eyes"; monsterModel = obj:IsA("Model") and obj or obj.Parent end
+            if not isPartOfOtherMonster(obj) then
+                detectedMonsterName = "Eyes"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+            end
         elseif nameLower == "halt" or nameLower == "haltmoving" then detectedMonsterName = "Halt"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("figure", 1, true) then
             local potentialModel = obj:IsA("Model") and obj or obj.Parent
@@ -639,12 +652,14 @@ local function processObject(obj)
                     createBillboard(obj, itemLabel, ESPColors.Items, "ESPItems")
                 end
             end
-            return -- Trả về luôn để không bị xét tiếp xuống các loại đồ vật bên dưới
+            return
         end
 
-        -- XỬ LÝ CÁC OBJECT KHÁC 
-        if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") then
-            createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
+        -- XỬ LÝ CÁC OBJECT KHÁC (FIX SÓT CỬA)
+        if (obj.Name == "Door" or nameLower == "doormodel" or (nameLower:find("door") and not isContainerOrLocker(obj))) and obj:IsA("Model") then
+            if not nameLower:find("dupe", 1, true) and not obj:FindFirstChild("DupeDoor") then
+                createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
+            end
         end
 
         if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) then
@@ -808,7 +823,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT
+-- ANTI-AFK & FULLBRIGHT (FIX MÀN HÌNH XANH LÈ)
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -817,6 +832,8 @@ task.spawn(function()
 end)
 
 local isFullbrightApplied = false
+local originalEffectStates = {}
+
 task.spawn(function()
     while task.wait(0.3) do
         if Flags.SmartFullbright then
@@ -829,13 +846,17 @@ task.spawn(function()
                 local ambValue = math.floor((Flags.FullbrightIntensity / 100) * 255)
                 Lighting.Ambient = Color3.fromRGB(ambValue, ambValue, ambValue)
                 Lighting.OutdoorAmbient = Color3.fromRGB(ambValue, ambValue, ambValue)
-                isFullbrightApplied = true
-
-                for _, child in ipairs(Lighting:GetChildren()) do
-                    if child:IsA("BlurEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("Atmosphere") or child:IsA("DepthOfFieldEffect") then
-                        child.Enabled = false
+                
+                if not isFullbrightApplied then
+                    originalEffectStates = {}
+                    for _, child in ipairs(Lighting:GetChildren()) do
+                        if child:IsA("BlurEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("Atmosphere") or child:IsA("DepthOfFieldEffect") then
+                            originalEffectStates[child] = child.Enabled
+                            child.Enabled = false
+                        end
                     end
                 end
+                isFullbrightApplied = true
             end)
         elseif isFullbrightApplied then
             isFullbrightApplied = false
@@ -846,11 +867,12 @@ task.spawn(function()
                 Lighting.GlobalShadows = OriginalLighting.GlobalShadows
                 Lighting.Ambient = OriginalLighting.Ambient
                 Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
-                for _, child in ipairs(Lighting:GetChildren()) do
-                    if child:IsA("BlurEffect") or child:IsA("ColorCorrectionEffect") or child:IsA("Atmosphere") then
-                        child.Enabled = true
+                for child, originalState in pairs(originalEffectStates) do
+                    if child and child.Parent then
+                        child.Enabled = originalState
                     end
                 end
+                originalEffectStates = {}
             end)
         end
     end
