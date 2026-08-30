@@ -128,7 +128,7 @@ if not screenGui.Parent then
 end
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (ĐÃ BỔ SUNG CHUẨN LIVEHINT CHO SÁCH CỬA 50)
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -140,6 +140,7 @@ local ImportantItems = {
     ["laserpointer"] = "🔴 Đèn Laser", ["alarmclock"] = "⏰ Đồng Hồ Báo Thức", ["compass"] = "🧭 La Bàn",
     ["strafe"] = "🌟 Bình Starlight", ["pickaxe"] = "⛏️ Cuốc",
     ["book"] = "📖 Sách (Cửa 50)",
+    ["livehint"] = "📖 Sách (Cửa 50)", -- Model chuẩn của sách phòng thư viện Cửa 50 trong DOORS
     ["fuse"] = "⚡ Cầu Chì (Cửa 100 / Floor 2)",
     ["beer"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["beerglass"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
@@ -584,7 +585,7 @@ local function createBillboard(targetObj, text, color, flagName)
 end
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ CẬP NHẬT ESP VẬT PHẨM 100% CHÍNH XÁC)
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ FIX LỖI SÁCH CỬA 50 & CHỐNG BỊ TRÙNG LUNG)
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -668,12 +669,12 @@ local function processObject(obj)
             return
         end
 
-        -- QUÉT VẬT PHẨM CHÍNH XÁC 100% (BÊN TRONG TỦ, HỘC TỦ, KỆ, RƯƠNG, HỘP CÔNG CỤ)
+        -- QUÉT VẬT PHẨM & SÁCH CỬA 50 CHÍNH XÁC TUYỆT ĐỐI
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
 
-        -- Xác thực kỹ càng qua ProximityPrompt để tránh nhận nhầm vật thể cảnh/đá/vật phát sáng môi trường
+        -- Bắt buộc phải có ProximityPrompt hợp lệ đối với vật phẩm để tránh nhận nhầm đồ trang trí/môi trường (chống chỉ tùng lung)
         local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
         if not prompt and obj.Parent then
             prompt = obj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
@@ -681,19 +682,30 @@ local function processObject(obj)
 
         if prompt and prompt.Enabled then
             local act = (prompt.ActionText or ""):lower()
-            -- Kiểm tra hành động nhặt đồ hợp lệ (tránh nhận nhầm tủ hoặc cục đá không có hành động lấy)
-            if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") or act:find("claim") or act:find("open") then
+            local objObjName = obj.Name:lower()
+            local parentObjName = (obj.Parent and obj.Parent.Name:lower()) or ""
+            
+            -- Chỉ chấp nhận các prompt có hành động lấy vật phẩm, hoặc đích danh là sách Cửa 50 (LiveHint / Book)
+            if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") or act:find("claim") or act:find("read") or objObjName == "livehint" or parentObjName == "livehint" then
                 if not itemLabel then
-                    local parentName = obj.Parent and obj.Parent.Name:lower() or ""
-                    -- Không gán nhãn cho chính cánh cửa tủ/hộc tủ trừ khi bên trong có chứa vật phẩm thực sự
-                    if not (nameLower:find("drawer") or nameLower:find("chest") or nameLower:find("toolbox") or nameLower:find("shelf") or nameLower:find("closet") or nameLower:find("knob")) then
-                        itemLabel = getItemLabel(obj.Name) or getItemLabel(parentName) or "📦 Vật Phẩm"
+                    if not (objObjName:find("drawer") or objObjName:find("chest") or objObjName:find("toolbox") or objObjName:find("shelf") or objObjName:find("closet") or objObjName:find("knob")) then
+                        itemLabel = getItemLabel(obj.Name) or getItemLabel(parentObjName) or "📦 Vật Phẩm"
                     end
                 end
+            else
+                -- Bỏ qua nếu prompt không thuộc dạng nhặt đồ
+                return
+            end
+        else
+            -- Nếu không có ProximityPrompt thì chỉ cho phép nếu đúng là LiveHint (sách Cửa 50) hoặc ImportantItems định nghĩa rõ
+            if obj.Name ~= "LiveHint" and not ImportantItems[obj.Name:lower()] then
+                return
+            end
+            if not itemLabel then
+                itemLabel = "📖 Sách (Cửa 50)"
             end
         end
 
-        -- Nếu vật phẩm nằm trong danh mục ImportantItems hợp lệ
         if itemLabel then
             local isHeld = false
             local ancestor = obj.Parent
@@ -725,7 +737,7 @@ local function processObject(obj)
     end)
 end
 
--- Tránh lag và crash trên thiết bị di động khi quét Workspace ban đầu
+-- Quét Workspace ban đầu
 task.spawn(function()
     pcall(function()
         for _, obj in ipairs(Workspace:GetChildren()) do 
@@ -908,7 +920,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT (ĐÃ SỬA LỖI TẮT VẪN GIỮ TRẠNG THÁI SÁNG)
+-- ANTI-AFK & FULLBRIGHT
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -924,7 +936,6 @@ task.spawn(function()
         if Flags.SmartFullbright then
             pcall(function()
                 if not isFullbrightApplied then
-                    -- Lưu lại trạng thái ánh sáng ban đầu trước khi bật Fullbright
                     OriginalLighting.Brightness = Lighting.Brightness
                     OriginalLighting.ClockTime = Lighting.ClockTime
                     OriginalLighting.FogEnd = Lighting.FogEnd
@@ -954,7 +965,6 @@ task.spawn(function()
         elseif isFullbrightApplied then
             isFullbrightApplied = false
             pcall(function()
-                -- Khôi phục hoàn toàn trạng thái ánh sáng ban đầu khi tắt
                 Lighting.Brightness = OriginalLighting.Brightness
                 Lighting.ClockTime = OriginalLighting.ClockTime
                 Lighting.FogEnd = OriginalLighting.FogEnd
@@ -1201,7 +1211,7 @@ createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 1
 
 -- TAB 2
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
-createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Tủ, Kệ, Rương, Hộp)", "ESPItems", 40)
+createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm & Sách Cửa 50", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Floor 2)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
 createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
@@ -1302,7 +1312,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Đã cập nhật ESP Vật Phẩm chuẩn 100% & Sửa lỗi Fullbright!",
+        Text = "Đã fix lỗi ESP Sách Cửa 50 & Lọc chuẩn vật phẩm!",
         Duration = 4
     })
 end)
