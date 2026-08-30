@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)[cite: 12]
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -1044,7 +1044,7 @@ gridLayout.CellSize = UDim2.new(0, 140, 0, 30); gridLayout.CellPadding = UDim2.n
 
 local entitiesToSummon = {"Rush", "Ambush", "Seek", "Figure", "Eyes", "Halt", "Screech", "A-60", "A-120", "Giggle", "Grumble", "Gloombat"}
 
--- HÀM TRIỆU HỒI ĐÃ ĐƯỢC SỬA LỖI & MÔ PHỎNG TỰ NHIÊN
+-- HÀM TRIỆU HỒI THỰC THỂ THẬT (GIỮ NGUYÊN HÌNH DÁNG VÀ LỐI CHƠI)
 local function summonEntityLocally(entityName)
     local rs = game:GetService("ReplicatedStorage")
     local ts = game:GetService("TweenService")
@@ -1057,33 +1057,51 @@ local function summonEntityLocally(entityName)
         return 
     end
     
-    pcall(function() StarterGui:SetCore("SendNotification", {Title = "Triệu Hồi", Text = "Đang gọi " .. entityName .. "...", Duration = 3}) end)
+    pcall(function() StarterGui:SetCore("SendNotification", {Title = "Triệu Hồi", Text = "Đang triệu hồi thực thể: " .. entityName .. "...", Duration = 3}) end)
     
-    local model = rs:FindFirstChild(entityName, true) or Workspace:FindFirstChild(entityName, true)
+    -- Tìm kiếm mô hình gốc của thực thể trong game (ReplicatedStorage hoặc Workspace)
+    local foundModel = nil
+    
+    for _, obj in ipairs(rs:GetDescendants()) do
+        if obj:IsA("Model") and (obj.Name:lower() == entityName:lower() or obj.Name:lower():find(entityName:lower())) then
+            foundModel = obj
+            break
+        end
+    end
+    
+    if not foundModel then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and (obj.Name:lower() == entityName:lower() or obj.Name:lower():find(entityName:lower())) then
+                foundModel = obj
+                break
+            end
+        end
+    end
+    
     local clone = nil
-    
-    if model and model:IsA("Model") then
-        clone = model:Clone()
+    if foundModel then
+        clone = foundModel:Clone()
     else
-        -- Tạo Phantom Block nếu game đã xóa mô hình thật
+        -- Fallback: Tạo mô hình chuẩn nếu không trích xuất được asset gốc
         clone = Instance.new("Model")
         clone.Name = entityName
         local mainPart = Instance.new("Part")
         mainPart.Name = "HumanoidRootPart"
         mainPart.Size = Vector3.new(4, 5, 4)
-        mainPart.Color = Color3.fromRGB(0, 0, 0)
+        mainPart.Transparency = 0.5
+        mainPart.Color = Color3.fromRGB(255, 0, 0)
         mainPart.Material = Enum.Material.Neon
         mainPart.Parent = clone
         clone.PrimaryPart = mainPart
         
-        local highlight = Instance.new("Highlight")
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.Parent = clone
+        local hl = Instance.new("Highlight")
+        hl.FillColor = Color3.fromRGB(255, 0, 0)
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.Parent = clone
     end
     
     if clone then
-        -- Neo lại toàn bộ để an toàn & không rớt map
+        -- Vô hiệu hóa va chạm và bật neo để mô phỏng mượt mà trên Client
         for _, part in ipairs(clone:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.Anchored = true
@@ -1095,10 +1113,10 @@ local function summonEntityLocally(entityName)
         
         local rootPart = clone.PrimaryPart or clone:FindFirstChild("HumanoidRootPart") or clone:FindFirstChildWhichIsA("BasePart")
         if rootPart then
-            -- Tính toán tọa độ xuất hiện (Sau 150 stud) và điểm đến (Trước 150 stud)
+            -- Tự động tính toán hướng di chuyển từ các ngóc ngách đến vị trí người chơi
             local lookVector = hrp.CFrame.LookVector
-            local startCFrame = CFrame.new(hrp.Position - (lookVector * 150), hrp.Position)
-            local endCFrame = CFrame.new(hrp.Position + (lookVector * 150), hrp.Position + (lookVector * 300))
+            local startCFrame = CFrame.new(hrp.Position - (lookVector * 180), hrp.Position)
+            local endCFrame = CFrame.new(hrp.Position + (lookVector * 180), hrp.Position + (lookVector * 300))
             
             if clone.PrimaryPart then
                 clone:SetPrimaryPartCFrame(startCFrame)
@@ -1106,10 +1124,14 @@ local function summonEntityLocally(entityName)
                 rootPart.CFrame = startCFrame
             end
             
-            -- Tốc độ mô phỏng cơ chế game
-            local speed = 80
-            if entityName == "Rush" or entityName == "Ambush" or entityName == "A-60" then speed = 150 end
-            if entityName == "Seek" or entityName == "Figure" then speed = 40 end
+            -- Tốc độ lao qua các ngóc ngách tương ứng từng loại thực thể
+            local speed = 100
+            local lowerName = entityName:lower()
+            if lowerName:find("rush") or lowerName:find("ambush") or lowerName:find("a-60") or lowerName:find("a-120") then
+                speed = 160
+            elseif lowerName:find("seek") or lowerName:find("figure") or lowerName:find("grumble") then
+                speed = 50
+            end
             
             local dist = (endCFrame.Position - startCFrame.Position).Magnitude
             local tweenInfo = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear)
@@ -1166,7 +1188,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01 (W ADMIN)",
-        Text = "Đã Fix lỗi Spawn Quái tự nhiên thành công!",
+        Text = "Đã cập nhật hệ thống Triệu Hồi Thực Thể Thật!",
         Duration = 4
     })
 end)
