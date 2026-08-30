@@ -151,6 +151,32 @@ local function isContainerOrLocker(obj)
     return false
 end
 
+local function isRealRoomDoor(obj)
+    if not obj or not obj:IsA("Model") then return false end
+    
+    -- Chỉ nhận các Model tên chính xác là "Door" hoặc "DoorModel" (lọc bỏ cửa sổ, cửa tủ linh tinh)
+    if obj.Name ~= "Door" and obj.Name ~= "DoorModel" then return false end
+    
+    -- Lọc các cửa giả có từ khóa "dupe" hoặc "fake" ở part con
+    for _, child in ipairs(obj:GetChildren()) do
+        local cName = child.Name:lower()
+        if cName:find("dupe") or cName:find("fake") then
+            return false
+        end
+    end
+    
+    -- Logic nhận diện Dupe chính xác nhất trong DOORS:
+    -- Cửa giả (Dupe) có part "Hidden" (để mở) nhưng lại KHÔNG CÓ "Sign" (Bảng số phòng) hoặc "Lock" (Ổ khóa)
+    if obj:FindFirstChild("Hidden") and not obj:FindFirstChild("Sign") and not obj:FindFirstChild("Lock") then
+        -- Nếu Room là số (1, 2, 3...) thì chắc chắn đây là phòng thường và đích thị là cửa giả (Dupe)
+        if obj.Parent and tonumber(obj.Parent.Name) then
+            return false 
+        end
+    end
+    
+    return true
+end
+
 --------------------------------------------------
 -- HỆ THỐNG FONT SIZE REAL-TIME
 --------------------------------------------------
@@ -248,16 +274,13 @@ task.spawn(function()
                 
                 if hrp and hasKey then
                     for _, obj in ipairs(Workspace:GetDescendants()) do
-                        local nameLower = obj.Name:lower()
-                        if (obj.Name == "Door" or nameLower == "doormodel" or (nameLower:find("door") and not isContainerOrLocker(obj))) and obj:IsA("Model") then
-                            if not nameLower:find("dupe", 1, true) and not obj:FindFirstChild("DupeDoor") then
-                                local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
-                                if doorPart then
-                                    local dist = (doorPart.Position - hrp.Position).Magnitude
-                                    if dist <= 8 then
-                                        local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                        if prompt and prompt.Enabled then safeInteract(prompt) end
-                                    end
+                        if isRealRoomDoor(obj) then
+                            local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
+                            if doorPart then
+                                local dist = (doorPart.Position - hrp.Position).Magnitude
+                                if dist <= 8 then
+                                    local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                                    if prompt and prompt.Enabled then safeInteract(prompt) end
                                 end
                             end
                         end
@@ -658,10 +681,8 @@ local function processObject(obj)
             return
         end
 
-        if (obj.Name == "Door" or nameLower == "doormodel" or (nameLower:find("door") and not isContainerOrLocker(obj))) and obj:IsA("Model") then
-            if not nameLower:find("dupe", 1, true) and not obj:FindFirstChild("DupeDoor") then
-                createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
-            end
+        if isRealRoomDoor(obj) then
+            createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
         end
 
         if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) then
