@@ -1,30 +1,47 @@
 -- ==================================================
 -- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED ESP ITEMS (FLOOR 1 & 2) + CUSTOM ITEMS
--- ==================================================[cite: 9]
+-- ==================================================
 
-local Players = game:GetService("Players")[cite: 9]
-local VirtualUser = game:GetService("VirtualUser")[cite: 9]
-local UserInputService = game:GetService("UserInputService")[cite: 9]
-local RunService = game:GetService("RunService")[cite: 9]
-local Workspace = game:GetService("Workspace")[cite: 9]
-local Lighting = game:GetService("Lighting")[cite: 9]
-local CoreGui = game:GetService("CoreGui")[cite: 9]
-local StarterGui = game:GetService("StarterGui")[cite: 9]
-local TweenService = game:GetService("TweenService")[cite: 9]
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 
-local LocalPlayer = Players.LocalPlayer[cite: 9]
-local Camera = Workspace.CurrentCamera[cite: 9]
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 
-local HasDrawing = false[cite: 9]
+local function getGlobal(name)
+    local success, val = pcall(function()
+        return getgenv()[name]
+    end)
+    if success and val ~= nil then return val end
+    success, val = pcall(function()
+        return _G[name]
+    end)
+    if success and val ~= nil then return val end
+    success, val = pcall(function()
+        return getfenv()[name]
+    end)
+    if success and val ~= nil then return val end
+    return nil
+end
+
+local HasDrawing = false
 pcall(function()
-    if Drawing and typeof(Drawing.new) == "function" then
+    local drawingLib = getGlobal("Drawing")
+    if drawingLib and typeof(drawingLib.new) == "function" then
         HasDrawing = true
     end
-end)[cite: 9]
+end)
 
 --------------------------------------------------
 -- CẤU HÌNH TRẠNG THÁI (FLAGS)
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local Flags = {
     AntiAFK = true,
     MonsterNotify = true,
@@ -52,7 +69,7 @@ local Flags = {
     Language = "VIE",
     Theme = "YellowBlack",
     TextSize = 13
-}[cite: 9]
+}
 
 local OriginalLighting = {
     Brightness = Lighting.Brightness,
@@ -61,17 +78,17 @@ local OriginalLighting = {
     GlobalShadows = Lighting.GlobalShadows,
     Ambient = Lighting.Ambient,
     OutdoorAmbient = Lighting.OutdoorAmbient
-}[cite: 9]
+}
 
 --------------------------------------------------
 -- PALETTE MÀU THEME MENU & MÀU ESP
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     RedBlack    = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     GreenBlack  = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     PinkBlack   = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
-}[cite: 9]
+}
 
 local ESPColors = {
     Monster = Color3.fromRGB(255, 40, 40),
@@ -80,32 +97,37 @@ local ESPColors = {
     Chest   = Color3.fromRGB(200, 100, 255),
     Items   = Color3.fromRGB(0, 255, 255),
     Player  = Color3.fromRGB(255, 140, 0)
-}[cite: 9]
+}
 
 local Translations = {
     VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật (Báo Đi)", Fullbright = "3. Nhìn Trong Bóng Tối (Fix Hant)", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS (1 Lần)", Speed = "3. Speed Hack (Max 10x)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 3.01 (Optimized)" },
     ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Monster Notify (Safe Leave)", Fullbright = "3. Fullbright (Hant Fix)", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button (Single)", Speed = "3. Speed Hack (Up to 10x)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 3.01 (Optimized)" }
-}[cite: 9]
+}
 
 --------------------------------------------------
 -- GIAO DIỆN MÀN HÌNH CHÍNH
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta301"
 screenGui.ResetOnSpawn = false
 
 pcall(function()
-    if gethui then
-        screenGui.Parent = gethui()
+    local hui = getGlobal("gethui")
+    if hui then
+        screenGui.Parent = hui()
     else
         screenGui.Parent = CoreGui
     end
-end)[cite: 9]
-if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end[cite: 9]
+end)
+if not screenGui.Parent then 
+    pcall(function()
+        screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end)
+end
 
 --------------------------------------------------
 -- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (Đã bổ sung Sách, Cầu chì, Cốc bia)
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
     ["skeletonkey"] = "💀 Chìa Khóa Đầu Lâu", ["flashlight"] = "🔦 Đèn Pin", ["candle"] = "🕯️ Nến",
@@ -115,13 +137,12 @@ local ImportantItems = {
     ["bandagepack"] = "🩹 Hộp Băng Gạc", ["batterypack"] = "🔋 Hộp Pin", ["bulklight"] = "🔦 Đèn Pin Công Nghiệp",
     ["laserpointer"] = "🔴 Đèn Laser", ["alarmclock"] = "⏰ Đồng Hồ Báo Thức", ["compass"] = "🧭 La Bàn",
     ["strafe"] = "🌟 Bình Starlight", ["pickaxe"] = "⛏️ Cuốc",
-    -- Bổ sung các vật phẩm theo yêu cầu:
     ["book"] = "📖 Sách (Cửa 50)",
     ["fuse"] = "⚡ Cầu Chì (Cửa 100 / Floor 2)",
     ["beer"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["beerglass"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["pint"] = "🍺 Cốc Bia (Phòng Gạt Cần)"
-}[cite: 9]
+}
 
 local MonsterAdvice = {
     ["Rush"] = "Trốn vô tủ mau!", ["Ambush"] = "Trốn vô tủ mau!", ["Seek"] = "Chuẩn bị chạy trốn Seek!",
@@ -129,7 +150,7 @@ local MonsterAdvice = {
     ["Figure"] = "Đi cúi người (Crouch), giữ khoảng cách!", ["Hide"] = "Rời khỏi tủ ngay!", ["Jack"] = "Chờ 1 chút rồi mở lại tủ!",
     ["Timothy"] = "Nhện giật mình trong hộc bàn!", ["Dread"] = "Mở cửa tiến lên phía trước mau!", ["A-60"] = "Trốn vô tủ ngay!", ["A-120"] = "Trốn vô tủ ngay!",
     ["Giggle"] = "Nhìn lên trần nhà và ném Glowstick!", ["Grumble"] = "Chạy thật nhanh, tránh đường cụt!", ["Gloombat"] = "Tắt đèn, đừng soi đèn vào bầy dơi!"
-}[cite: 9]
+}
 
 local function getItemLabel(name)
     if not name or name == "" then return nil end
@@ -143,7 +164,7 @@ local function getItemLabel(name)
         end
     end
     return nil
-end[cite: 9]
+end
 
 local function isContainerOrLocker(obj)
     local current = obj
@@ -155,7 +176,7 @@ local function isContainerOrLocker(obj)
         current = current.Parent
     end
     return false
-end[cite: 9]
+end
 
 local function isRealRoomDoor(obj)
     if not obj or not obj:IsA("Model") then return false end
@@ -176,11 +197,11 @@ local function isRealRoomDoor(obj)
     end
     
     return true
-end[cite: 9]
+end
 
 --------------------------------------------------
 -- HỆ THỐNG FONT SIZE REAL-TIME
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
     table.insert(TextSizeRegister, label)
@@ -190,16 +211,17 @@ local function updateAllTextSizes()
     for _, lbl in ipairs(TextSizeRegister) do
         if lbl and lbl.Parent then lbl.TextSize = Flags.TextSize end
     end
-end[cite: 9]
+end
 
 --------------------------------------------------
 -- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
     pcall(function()
-        if fireproximityprompt then
-            fireproximityprompt(prompt)
+        local fpp = getGlobal("fireproximityprompt")
+        if fpp then
+            fpp(prompt)
         else
             prompt:InputHoldBegin()
             task.wait(prompt.HoldDuration)
@@ -207,11 +229,11 @@ local function safeInteract(prompt)
         end
     end)
     return true
-end[cite: 9]
+end
 
 --------------------------------------------------
 -- LOGIC AUTO MỞ TỦ & AUTO LOOT
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
 local DRAWER_COOLDOWN = 0.6
@@ -259,11 +281,11 @@ task.spawn(function()
             end)
         end
     end
-end)[cite: 9]
+end)
 
 --------------------------------------------------
 -- LOGIC AUTO MỞ CỬA BẰNG KEY
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 task.spawn(function()
     while task.wait(0.2) do
         if Flags.AutoKeyDoor and LocalPlayer.Character then
@@ -290,11 +312,11 @@ task.spawn(function()
             end)
         end
     end
-end)[cite: 9]
+end)
 
 --------------------------------------------------
 -- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
@@ -303,7 +325,7 @@ RunService.Stepped:Connect(function()
             end
         end
     end
-end)[cite: 9]
+end)
 
 RunService.Heartbeat:Connect(function(dt)
     if LocalPlayer.Character then
@@ -334,7 +356,7 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
     end
-end)[cite: 9]
+end)
 
 local flyBodyVel, flyBodyGyro = nil, nil
 local flyVerticalSpeed = 0
@@ -367,7 +389,7 @@ RunService.RenderStepped:Connect(function()
         if flyBodyGyro then flyBodyGyro:Destroy(); flyBodyGyro = nil end
         if not Flags.FreecamSoul then flyVerticalSpeed = 0 end
     end
-end)[cite: 9]
+end)
 
 local freecamPart = nil
 local isFreecamActive = false
@@ -410,7 +432,7 @@ local function setFreecamState(state)
         Camera.CameraType = Enum.CameraType.Custom
         if freecamPart then freecamPart:Destroy(); freecamPart = nil end
     end
-end[cite: 9]
+end
 
 RunService.RenderStepped:Connect(function(dt)
     if isFreecamActive and freecamPart and LocalPlayer.Character then
@@ -423,11 +445,11 @@ RunService.RenderStepped:Connect(function(dt)
         
         freecamPart.Position = freecamPart.Position + (horizontalMove * speed * dt) + verticalMove
     end
-end)[cite: 9]
+end)
 
 --------------------------------------------------
--- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG (FIXED CHO FLOOR 2)
---------------------------------------------------[cite: 9]
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG
+--------------------------------------------------
 local TrackedESPs = setmetatable({}, { __mode = "k" })
 
 local function getSafePart(obj)
@@ -570,11 +592,11 @@ local function createBillboard(targetObj, text, color, flagName)
         end
         cleanESP()
     end)
-end[cite: 9]
+end
 
 --------------------------------------------------
 -- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
 
@@ -709,11 +731,11 @@ end
 task.spawn(function()
     for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
 end)
-Workspace.DescendantAdded:Connect(processObject)[cite: 9]
+Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
 -- ESP NGƯỜI CHƠI
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local function getHealthColor(percent)
     if percent >= 0.9 then
         return Color3.fromRGB(50, 255, 50)
@@ -786,19 +808,27 @@ local function setupFullPlayerESP(plr)
         local box, line
         if HasDrawing then
             pcall(function()
-                box = Drawing.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
-                line = Drawing.new("Line"); line.Visible = false; line.Thickness = 1.5
+                local DrawingLib = getGlobal("Drawing")
+                if DrawingLib and typeof(DrawingLib.new) == "function" then
+                    box = DrawingLib.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
+                    line = DrawingLib.new("Line"); line.Visible = false; line.Thickness = 1.5
+                end
             end)
         end
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
             if not char or not char.Parent or not hrp or not hrp.Parent or not humanoid or not humanoid.Parent or humanoid.Health <= 0 or not Players:FindFirstChild(plr.Name) then
-                hl:Destroy(); bb:Destroy()
+                if hl and hl.Parent then hl:Destroy() end
+                if bb and bb.Parent then bb:Destroy() end
                 if HasDrawing then
                     pcall(function() 
-                        if box then box:Remove() end 
-                        if line then line:Remove() end 
+                        if box then 
+                            if typeof(box.Destroy) == "function" then box:Destroy() elseif typeof(box.Remove) == "function" then box:Remove() end
+                        end 
+                        if line then 
+                            if typeof(line.Destroy) == "function" then line:Destroy() elseif typeof(line.Remove) == "function" then line:Remove() end
+                        end 
                     end)
                 end
                 if renderConnection then renderConnection:Disconnect() end
@@ -870,11 +900,11 @@ local function setupFullPlayerESP(plr)
 end
 
 for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
-Players.PlayerAdded:Connect(setupFullPlayerESP)[cite: 9]
+Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
 -- ANTI-AFK & FULLBRIGHT
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
         if Flags.AntiAFK then pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end
@@ -926,11 +956,11 @@ task.spawn(function()
             end)
         end
     end
-end)[cite: 9]
+end)
 
 --------------------------------------------------
 -- GIAO DIỆN MOTE HUB
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
     gui.InputBegan:Connect(function(input)
@@ -1214,8 +1244,7 @@ authorLbl.Size = UDim2.new(0.96, 0, 0, 20); authorLbl.Position = UDim2.new(0.02,
 registerTextLabel(authorLbl)
 
 local fbLbl = Instance.new("TextLabel")
-fbLbl.Size = UDim2.new(0.96, 0, 0, 20); fbLbl.Position = UDim2.new(0.02, 0, 0, 195); fbLbl.BackgroundTransparency = 1; fbLbl.Text = Translations[Flags.Language].Facebook; fbLbl.Font = Enum.Font.SourceSansBold; fbLbl.TextColor3 = Color3.fromRGB(200, 200, 200); fbLbl.TextXAlignment = Enum.TextXAlignment.Left; authorLbl.Parent = pages[5]
-fbLbl.Parent = pages[5]
+fbLbl.Size = UDim2.new(0.96, 0, 0, 20); fbLbl.Position = UDim2.new(0.02, 0, 0, 195); fbLbl.BackgroundTransparency = 1; fbLbl.Text = Translations[Flags.Language].Facebook; fbLbl.Font = Enum.Font.SourceSansBold; fbLbl.TextColor3 = Color3.fromRGB(200, 200, 200); fbLbl.TextXAlignment = Enum.TextXAlignment.Left; fbLbl.Parent = pages[5]
 registerTextLabel(fbLbl)
 
 local verLbl = Instance.new("TextLabel")
@@ -1236,7 +1265,7 @@ btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLangu
 
 --------------------------------------------------
 -- MỞ / TẮT MENU
---------------------------------------------------[cite: 9]
+--------------------------------------------------
 local isMenuAnimating = false
 circleBtn.MouseButton1Click:Connect(function()
     if isMenuAnimating then return end
@@ -1262,4 +1291,4 @@ pcall(function()
         Text = "Mote Hub ESP Thêm Sách, Cầu Chì & Cốc Bia Đã Sẵn Sàng!",
         Duration = 4
     })
-end)[cite: 9]
+end)
