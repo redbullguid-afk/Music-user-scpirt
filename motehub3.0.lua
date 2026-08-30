@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED ESP ITEMS
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -88,7 +88,7 @@ local Translations = {
 }
 
 --------------------------------------------------
--- GIAO DIỆN MÀN HÌNH CHÍNH (TẠO TRƯỚC ĐỂ ESP SỬ DỤNG)
+-- GIAO DIỆN MÀN HÌNH CHÍNH
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta301"
@@ -401,7 +401,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG (ĐÃ SỬA LỖI)
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG
 --------------------------------------------------
 local TrackedESPs = setmetatable({}, { __mode = "k" })
 
@@ -483,7 +483,7 @@ local function createBillboard(targetObj, text, color, flagName)
     billboard.StudsOffset = Vector3.new(0, 2, 0)
     billboard.AlwaysOnTop = true
     billboard.LightInfluence = 0
-    billboard.Parent = screenGui -- Đưa vào ScreenGui thay vì Workspace để không bị ẩn
+    billboard.Parent = screenGui 
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
@@ -620,29 +620,29 @@ local function processObject(obj)
             return
         end
 
-        if not isContainerOrLocker(obj) then
-            local itemLabel = getItemLabel(obj.Name)
-            if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
-            if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
+        -- LOGIC ITEM ĐÃ ĐƯỢC ĐƯA LÊN TRƯỚC ĐỂ FIX LỖI BỊ CHẶN BỞI CONTAINER
+        local itemLabel = getItemLabel(obj.Name)
+        if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
+        if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
 
-            if itemLabel then
-                local isHeld = false
-                local ancestor = obj.Parent
-                while ancestor and ancestor ~= Workspace do
-                    if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
-                    ancestor = ancestor.Parent
-                end
-
-                if not isHeld then
-                    local tPart = getSafePart(obj)
-                    if tPart and not isTooCloseToExistingItemESP(tPart.Position) then
-                        createBillboard(obj, itemLabel, ESPColors.Items, "ESPItems")
-                    end
-                end
-                return
+        if itemLabel then
+            local isHeld = false
+            local ancestor = obj.Parent
+            while ancestor and ancestor ~= Workspace do
+                if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
+                ancestor = ancestor.Parent
             end
+
+            if not isHeld then
+                local tPart = getSafePart(obj)
+                if tPart and not isTooCloseToExistingItemESP(tPart.Position) then
+                    createBillboard(obj, itemLabel, ESPColors.Items, "ESPItems")
+                end
+            end
+            return -- Trả về luôn để không bị xét tiếp xuống các loại đồ vật bên dưới
         end
 
+        -- XỬ LÝ CÁC OBJECT KHÁC 
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") then
             createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
         end
@@ -663,7 +663,7 @@ end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (GIỮ NGUYÊN BẢN CŨ KHÔNG ĐỔI)
+-- ESP NGƯỜI CHƠI
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -857,7 +857,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN MOTE HUB (GIỮ NGUYÊN GIAO DIỆN CŨ)
+-- GIAO DIỆN MOTE HUB
 --------------------------------------------------
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
