@@ -88,6 +88,22 @@ local Translations = {
 }
 
 --------------------------------------------------
+-- GIAO DIỆN MÀN HÌNH CHÍNH (TẠO TRƯỚC ĐỂ ESP SỬ DỤNG)
+--------------------------------------------------
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MoteHub_Beta301"
+screenGui.ResetOnSpawn = false
+
+pcall(function()
+    if gethui then
+        screenGui.Parent = gethui()
+    else
+        screenGui.Parent = CoreGui
+    end
+end)
+if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+--------------------------------------------------
 -- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT
 --------------------------------------------------
 local ImportantItems = {
@@ -113,9 +129,7 @@ local function getItemLabel(name)
     if not name or name == "" then return nil end
     local lowerName = name:lower()
     
-    if ImportantItems[lowerName] then
-        return ImportantItems[lowerName]
-    end
+    if ImportantItems[lowerName] then return ImportantItems[lowerName] end
     
     for key, label in pairs(ImportantItems) do
         if lowerName == key or lowerName == (key .. "item") or lowerName == ("item_" .. key) then
@@ -133,20 +147,6 @@ local function isContainerOrLocker(obj)
             return true
         end
         current = current.Parent
-    end
-    return false
-end
-
-local function isTooCloseToExistingItemESP(pos)
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BillboardGui") and obj.Name:find("Mote_ESP_ESPItems") then
-            local ad = obj.Adornee
-            if ad and ad:IsA("BasePart") then
-                if (ad.Position - pos).Magnitude <= 3 then
-                    return true
-                end
-            end
-        end
     end
     return false
 end
@@ -256,9 +256,7 @@ task.spawn(function()
                                     local dist = (doorPart.Position - hrp.Position).Magnitude
                                     if dist <= 8 then
                                         local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                        if prompt and prompt.Enabled then
-                                            safeInteract(prompt)
-                                        end
+                                        if prompt and prompt.Enabled then safeInteract(prompt) end
                                     end
                                 end
                             end
@@ -271,7 +269,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK & NOCLIP
+-- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
@@ -302,18 +300,12 @@ RunService.Heartbeat:Connect(function(dt)
                         
                         if Flags.AntiRubberband then
                             local targetVel = humanoid.MoveDirection * targetSpeed
-                            hrp.AssemblyLinearVelocity = Vector3.new(
-                                targetVel.X,
-                                hrp.AssemblyLinearVelocity.Y,
-                                targetVel.Z
-                            )
+                            hrp.AssemblyLinearVelocity = Vector3.new(targetVel.X, hrp.AssemblyLinearVelocity.Y, targetVel.Z)
                         end
                     end
                 end
             else
-                if humanoid.WalkSpeed > 16 and humanoid.WalkSpeed <= 160 then
-                    humanoid.WalkSpeed = 16
-                end
+                if humanoid.WalkSpeed > 16 and humanoid.WalkSpeed <= 160 then humanoid.WalkSpeed = 16 end
             end
         end
     end
@@ -352,9 +344,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
---------------------------------------------------
--- CHẾ ĐỘ FREECAM / LINH HỒN TÁCH XÁC
---------------------------------------------------
 local freecamPart = nil
 local isFreecamActive = false
 
@@ -412,19 +401,29 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- HÀM TÌM PROXIMITY PROMPT AN TOÀN
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG (ĐÃ SỬA LỖI)
 --------------------------------------------------
-local function getObjectPrompt(targetPart)
-    if not targetPart then return nil end
-    
-    local prompt = targetPart:FindFirstChildWhichIsA("ProximityPrompt", true)
+local TrackedESPs = setmetatable({}, { __mode = "k" })
+
+local function getSafePart(obj)
+    if not obj then return nil end
+    if obj:IsA("BasePart") then return obj end
+    if obj:IsA("Model") then
+        return obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+    end
+    return obj:FindFirstChildWhichIsA("BasePart", true)
+end
+
+local function getObjectPrompt(targetObj)
+    if not targetObj then return nil end
+    local prompt = targetObj:FindFirstChildWhichIsA("ProximityPrompt", true)
     if prompt then return prompt end
     
-    if targetPart.Parent and targetPart.Parent ~= Workspace then
-        prompt = targetPart.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if targetObj.Parent and targetObj.Parent ~= Workspace then
+        prompt = targetObj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
         if prompt then return prompt end
         
-        local ancestor = targetPart.Parent.Parent
+        local ancestor = targetObj.Parent.Parent
         while ancestor and ancestor ~= Workspace do
             if ancestor:IsA("Model") then
                 if ancestor.Name:lower():find("room") then break end
@@ -437,12 +436,12 @@ local function getObjectPrompt(targetPart)
     return nil
 end
 
-local function isItemValidAndUncollected(targetPart)
-    if not targetPart or not targetPart.Parent or not targetPart:IsDescendantOf(Workspace) then
+local function isItemValidAndUncollected(targetObj)
+    if not targetObj or not targetObj.Parent or not targetObj:IsDescendantOf(Workspace) then
         return false
     end
 
-    local current = targetPart
+    local current = targetObj
     while current and current ~= Workspace do
         if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) then
             return false
@@ -450,20 +449,32 @@ local function isItemValidAndUncollected(targetPart)
         current = current.Parent
     end
 
-    local prompt = getObjectPrompt(targetPart)
-    if prompt and prompt.Parent == nil then
-        return false
-    end
-
+    local prompt = getObjectPrompt(targetObj)
+    if prompt and prompt.Parent == nil then return false end
     return true
 end
 
---------------------------------------------------
--- ESP BILLBOARD GUI
---------------------------------------------------
-local function createBillboard(targetPart, text, color, flagName)
+local function isTooCloseToExistingItemESP(pos)
+    for obj, flags in pairs(TrackedESPs) do
+        if flags["ESPItems"] then
+            local part = getSafePart(obj)
+            if part and (part.Position - pos).Magnitude <= 3 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function createBillboard(targetObj, text, color, flagName)
+    if not targetObj then return end
+    if TrackedESPs[targetObj] and TrackedESPs[targetObj][flagName] then return end
+
+    local targetPart = getSafePart(targetObj)
     if not targetPart then return end
-    if targetPart:FindFirstChild("Mote_ESP_" .. flagName) then return end
+
+    if not TrackedESPs[targetObj] then TrackedESPs[targetObj] = {} end
+    TrackedESPs[targetObj][flagName] = true
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "Mote_ESP_" .. flagName
@@ -471,6 +482,8 @@ local function createBillboard(targetPart, text, color, flagName)
     billboard.Size = UDim2.new(0, 160, 0, 35)
     billboard.StudsOffset = Vector3.new(0, 2, 0)
     billboard.AlwaysOnTop = true
+    billboard.LightInfluence = 0
+    billboard.Parent = screenGui -- Đưa vào ScreenGui thay vì Workspace để không bị ẩn
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
@@ -481,18 +494,21 @@ local function createBillboard(targetPart, text, color, flagName)
     label.TextColor3 = color
     label.Parent = billboard
 
-    billboard.Parent = targetPart
-
     local connections = {}
+    local isCleaned = false
+
     local function cleanESP()
+        if isCleaned then return end
+        isCleaned = true
         for _, conn in ipairs(connections) do
-            if conn then conn:Disconnect() end
+            if conn then pcall(function() conn:Disconnect() end) end
         end
         pcall(function() billboard:Destroy() end)
+        if TrackedESPs[targetObj] then TrackedESPs[targetObj][flagName] = nil end
     end
 
     if flagName == "ESPItems" then
-        local prompt = getObjectPrompt(targetPart)
+        local prompt = getObjectPrompt(targetObj)
         if prompt then
             table.insert(connections, prompt.Triggered:Connect(function()
                 task.wait(0.05)
@@ -500,21 +516,19 @@ local function createBillboard(targetPart, text, color, flagName)
             end))
             table.insert(connections, prompt.TriggerEnded:Connect(function()
                 task.wait(0.05)
-                if not isItemValidAndUncollected(targetPart) then cleanESP() end
+                if not isItemValidAndUncollected(targetObj) then cleanESP() end
             end))
         end
 
-        table.insert(connections, targetPart.AncestryChanged:Connect(function(_, parent)
-            if not parent or not targetPart:IsDescendantOf(Workspace) then
-                cleanESP()
-            end
+        table.insert(connections, targetObj.AncestryChanged:Connect(function(_, parent)
+            if not parent or not targetObj:IsDescendantOf(Workspace) then cleanESP() end
         end))
     end
 
     task.spawn(function()
-        while targetPart and targetPart.Parent and targetPart:IsDescendantOf(Workspace) do
+        while targetObj and targetObj.Parent and targetObj:IsDescendantOf(Workspace) and not isCleaned do
             if flagName == "ESPItems" then
-                if not isItemValidAndUncollected(targetPart) then
+                if not isItemValidAndUncollected(targetObj) then
                     cleanESP()
                     break
                 end
@@ -522,7 +536,8 @@ local function createBillboard(targetPart, text, color, flagName)
 
             if Flags[flagName] and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 billboard.Enabled = true
-                local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - targetPart.Position).Magnitude)
+                local charPos = LocalPlayer.Character.HumanoidRootPart.Position
+                local dist = math.floor((charPos - targetPart.Position).Magnitude)
                 label.Text = string.format("%s\n[%d studs]", text, dist)
             else
                 billboard.Enabled = false
@@ -534,7 +549,121 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (ĐÃ CẬP NHẬT HIỆN XUYÊN VẬT THỂ & TRACER NỐI TỪ NGƯỜI DÙNG)
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ
+--------------------------------------------------
+local activeMonstersList = {}
+local lastNoticeTimes = {}
+
+local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
+    if not Flags.MonsterNotify or activeMonstersList[monsterObj] then return end
+    activeMonstersList[monsterObj] = rawMonsterName
+
+    local now = tick()
+    if not lastNoticeTimes[rawMonsterName] or (now - lastNoticeTimes[rawMonsterName] >= 5) then
+        lastNoticeTimes[rawMonsterName] = now
+        local actionText = MonsterAdvice[rawMonsterName] or "Cẩn thận quái vật này!"
+
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "🚨 CẢNH BÁO: " .. rawMonsterName:upper(),
+                Text = actionText,
+                Duration = 4
+            })
+        end)
+    end
+
+    local conn
+    conn = monsterObj.AncestryChanged:Connect(function(_, parent)
+        if not parent or not monsterObj:IsDescendantOf(Workspace) then
+            if conn then conn:Disconnect() end
+            activeMonstersList[monsterObj] = nil
+            if rawMonsterName == "Rush" or rawMonsterName == "Ambush" or rawMonsterName == "A-60" or rawMonsterName == "A-120" then
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", { Title = "🟢 AN TOÀN!", Text = rawMonsterName .. " đã đi qua hẳn! Bạn có thể ra khỏi tủ.", Duration = 4 })
+                end)
+            end
+        end
+    end)
+end
+
+local function processObject(obj)
+    pcall(function()
+        if not obj or not obj.Parent then return end
+        local nameLower = obj.Name:lower()
+
+        local monsterModel = nil
+        local detectedMonsterName = nil
+
+        if nameLower:find("giggle", 1, true) then detectedMonsterName = "Giggle"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("rushmoving", 1, true) or nameLower == "rush" then detectedMonsterName = "Rush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then detectedMonsterName = "Ambush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" then detectedMonsterName = "Seek"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower == "screech" then detectedMonsterName = "Screech"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower == "eyes" or nameLower == "eyesmoving" then
+            local pName = obj.Parent and obj.Parent.Name:lower() or ""
+            if not pName:find("giggle", 1, true) then detectedMonsterName = "Eyes"; monsterModel = obj:IsA("Model") and obj or obj.Parent end
+        elseif nameLower == "halt" or nameLower == "haltmoving" then detectedMonsterName = "Halt"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("figure", 1, true) then
+            local potentialModel = obj:IsA("Model") and obj or obj.Parent
+            if potentialModel and (potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("Root") or potentialModel:FindFirstChildOfClass("Humanoid")) then
+                detectedMonsterName = "Figure"; monsterModel = potentialModel
+            end
+        elseif nameLower == "a60" or nameLower == "a-60" then detectedMonsterName = "A-60"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower == "a120" or nameLower == "a-120" then detectedMonsterName = "A-120"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("grumble", 1, true) then detectedMonsterName = "Grumble"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        elseif nameLower:find("gloombat", 1, true) then detectedMonsterName = "Gloombat"; monsterModel = obj:IsA("Model") and obj or obj.Parent
+        end
+
+        if detectedMonsterName and monsterModel then
+            createBillboard(monsterModel, "⚠️ " .. detectedMonsterName, ESPColors.Monster, "ESPMonster")
+            triggerSmartMonsterNotice(monsterModel, detectedMonsterName)
+            return
+        end
+
+        if not isContainerOrLocker(obj) then
+            local itemLabel = getItemLabel(obj.Name)
+            if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
+            if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
+
+            if itemLabel then
+                local isHeld = false
+                local ancestor = obj.Parent
+                while ancestor and ancestor ~= Workspace do
+                    if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
+                    ancestor = ancestor.Parent
+                end
+
+                if not isHeld then
+                    local tPart = getSafePart(obj)
+                    if tPart and not isTooCloseToExistingItemESP(tPart.Position) then
+                        createBillboard(obj, itemLabel, ESPColors.Items, "ESPItems")
+                    end
+                end
+                return
+            end
+        end
+
+        if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") then
+            createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
+        end
+
+        if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) then
+            createBillboard(obj, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever")
+        end
+
+        if nameLower:find("chest", 1, true) or nameLower == "lootbox" then
+            createBillboard(obj, "📦 Rương Đồ", ESPColors.Chest, "ESPChest")
+        end
+    end)
+end
+
+task.spawn(function()
+    for _, obj in ipairs(Workspace:GetDescendants()) do processObject(obj) end
+end)
+Workspace.DescendantAdded:Connect(processObject)
+
+--------------------------------------------------
+-- ESP NGƯỜI CHƠI (GIỮ NGUYÊN BẢN CŨ KHÔNG ĐỔI)
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -560,8 +689,8 @@ local function setupFullPlayerESP(plr)
         bb.Adornee = head
         bb.Size = UDim2.new(0, 200, 0, 45)
         bb.StudsOffset = Vector3.new(0, 3, 0)
-        bb.AlwaysOnTop = true -- Bật AlwaysOnTop giúp cả chữ và thanh máu hiện xuyên vật thể
-        bb.LightInfluence = 0 -- Đảm bảo không bị che tối bởi ánh sáng môi trường
+        bb.AlwaysOnTop = true 
+        bb.LightInfluence = 0 
 
         local label = bb:FindFirstChild("TextLabel") or Instance.new("TextLabel")
         label.Size = UDim2.new(1, 0, 0, 30)
@@ -573,7 +702,6 @@ local function setupFullPlayerESP(plr)
         label.TextColor3 = ESPColors.Player
         label.Parent = bb
         
-        -- THANH MÁU CỐ ĐỊNH TRÊN ĐẦU (HIỆN XUYÊN VẬT THỂ)
         local healthBg = bb:FindFirstChild("HealthBg") or Instance.new("Frame")
         healthBg.Name = "HealthBg"
         healthBg.Size = UDim2.new(0, 80, 0, 7)
@@ -625,7 +753,6 @@ local function setupFullPlayerESP(plr)
                     label.Text = string.format("👤 %s\n[%d studs] | %d%%", plr.DisplayName, dist, math.floor(healthPercent * 100))
                 end
                 
-                -- Cập nhật màu và kích thước của Thanh Máu Cố Định
                 if healthFill then
                     healthFill.Size = UDim2.new(healthPercent, 0, 1, 0)
                     healthFill.BackgroundColor3 = Color3.fromRGB(255 - (healthPercent * 255), healthPercent * 255, 0)
@@ -644,7 +771,6 @@ local function setupFullPlayerESP(plr)
                             box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                             box.Visible = true
                             
-                            -- SỢI DÂY NỐI TỪ THÂN NGƯỜI DÙNG SCRIPT (LocalPlayer) TỚI NGƯỜI CHƠI KHÁC
                             if line then
                                 if localHrp then
                                     local myPos, _ = Camera:WorldToViewportPoint(localHrp.Position)
@@ -680,178 +806,6 @@ end
 
 for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
-
---------------------------------------------------
--- CẢNH BÁO QUÁI VẬT
---------------------------------------------------
-local activeMonstersList = {}
-local lastNoticeTimes = {}
-
-local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
-    if not Flags.MonsterNotify or activeMonstersList[monsterObj] then return end
-    activeMonstersList[monsterObj] = rawMonsterName
-
-    local now = tick()
-    if not lastNoticeTimes[rawMonsterName] or (now - lastNoticeTimes[rawMonsterName] >= 5) then
-        lastNoticeTimes[rawMonsterName] = now
-        local actionText = MonsterAdvice[rawMonsterName] or "Cẩn thận quái vật này!"
-
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "🚨 CẢNH BÁO: " .. rawMonsterName:upper(),
-                Text = actionText,
-                Duration = 4
-            })
-        end)
-    end
-
-    local conn
-    conn = monsterObj.AncestryChanged:Connect(function(_, parent)
-        if not parent or not monsterObj:IsDescendantOf(Workspace) then
-            if conn then conn:Disconnect() end
-            activeMonstersList[monsterObj] = nil
-
-            if rawMonsterName == "Rush" or rawMonsterName == "Ambush" or rawMonsterName == "A-60" or rawMonsterName == "A-120" then
-                pcall(function()
-                    StarterGui:SetCore("SendNotification", {
-                        Title = "🟢 AN TOÀN!",
-                        Text = rawMonsterName .. " đã đi qua hẳn! Bạn có thể ra khỏi tủ.",
-                        Duration = 4
-                    })
-                end)
-            end
-        end
-    end)
-end
-
---------------------------------------------------
--- BỘ QUÉT VẬT THỂ & MÔ HÌNH
---------------------------------------------------
-local function processObject(obj)
-    pcall(function()
-        if not obj or not obj.Parent then return end
-        local nameLower = obj.Name:lower()
-
-        -- 1. ƯU TIÊN KIỂM TRA QUÁI VẬT TRƯỚC
-        local monsterModel = nil
-        local detectedMonsterName = nil
-
-        if nameLower:find("giggle", 1, true) then
-            detectedMonsterName = "Giggle"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("rushmoving", 1, true) or nameLower == "rush" then
-            detectedMonsterName = "Rush"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then
-            detectedMonsterName = "Ambush"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" then
-            detectedMonsterName = "Seek"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower == "screech" then
-            detectedMonsterName = "Screech"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower == "eyes" or nameLower == "eyesmoving" then
-            local pName = obj.Parent and obj.Parent.Name:lower() or ""
-            if not pName:find("giggle", 1, true) then
-                detectedMonsterName = "Eyes"
-                monsterModel = obj:IsA("Model") and obj or obj.Parent
-            end
-        elseif nameLower == "halt" then
-            detectedMonsterName = "Halt"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("figure", 1, true) then
-            local potentialModel = obj:IsA("Model") and obj or obj.Parent
-            if potentialModel and (potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("Root") or potentialModel:FindFirstChildOfClass("Humanoid")) then
-                detectedMonsterName = "Figure"
-                monsterModel = potentialModel
-            end
-        elseif nameLower == "a60" or nameLower == "a-60" then
-            detectedMonsterName = "A-60"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower == "a120" or nameLower == "a-120" then
-            detectedMonsterName = "A-120"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("grumble", 1, true) then
-            detectedMonsterName = "Grumble"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        elseif nameLower:find("gloombat", 1, true) then
-            detectedMonsterName = "Gloombat"
-            monsterModel = obj:IsA("Model") and obj or obj.Parent
-        end
-
-        if detectedMonsterName and monsterModel then
-            if not monsterModel:FindFirstChild("Mote_ESP_ESPMonster", true) then
-                local targetPart = monsterModel:FindFirstChild("HumanoidRootPart") 
-                                or monsterModel:FindFirstChild("Root") 
-                                or (monsterModel:IsA("BasePart") and monsterModel) 
-                                or monsterModel:FindFirstChildWhichIsA("BasePart", true)
-
-                if targetPart then
-                    createBillboard(targetPart, "⚠️ " .. detectedMonsterName, ESPColors.Monster, "ESPMonster")
-                    triggerSmartMonsterNotice(monsterModel, detectedMonsterName)
-                end
-            end
-            return
-        end
-
-        -- 2. XỬ LÝ VẬT PHẨM
-        if not isContainerOrLocker(obj) then
-            local itemLabel = getItemLabel(obj.Name)
-            if not itemLabel and obj.Parent then
-                itemLabel = getItemLabel(obj.Parent.Name)
-            end
-            if not itemLabel and obj.Parent and obj.Parent.Parent then
-                itemLabel = getItemLabel(obj.Parent.Parent.Name)
-            end
-
-            if itemLabel then
-                local isHeld = false
-                local ancestor = obj.Parent
-                while ancestor and ancestor ~= Workspace do
-                    if ancestor:FindFirstChildOfClass("Humanoid") then isHeld = true; break end
-                    ancestor = ancestor.Parent
-                end
-
-                if not isHeld then
-                    local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                    if not targetPart and obj.Parent and obj.Parent:IsA("BasePart") then
-                        targetPart = obj.Parent
-                    end
-                    if targetPart and not targetPart:FindFirstChild("Mote_ESP_ESPItems") then
-                        if not isTooCloseToExistingItemESP(targetPart.Position) then
-                            createBillboard(targetPart, itemLabel, ESPColors.Items, "ESPItems")
-                        end
-                    end
-                end
-                return
-            end
-        end
-
-        -- 3. XỬ LÝ CỬA, CẦN GẠT, RƯƠNG
-        if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
-            local doorPart = obj:FindFirstChild("Door") or obj:FindFirstChildWhichIsA("BasePart")
-            if doorPart then createBillboard(doorPart, "🚪 Cửa", ESPColors.Door, "ESPDoor") end
-        end
-
-        if (nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true)) and not obj:FindFirstChild("Mote_ESP_ESPLever", true) then
-            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then createBillboard(targetPart, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever") end
-        end
-
-        if (nameLower:find("chest", 1, true) or nameLower == "lootbox") and not obj:FindFirstChild("Mote_ESP_ESPChest", true) then
-            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-            if targetPart then createBillboard(targetPart, "📦 Rương Đồ", ESPColors.Chest, "ESPChest") end
-        end
-    end)
-end
-
-task.spawn(function()
-    for _, obj in ipairs(Workspace:GetDescendants()) do 
-        processObject(obj)
-    end
-end)
-Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
 -- ANTI-AFK & FULLBRIGHT
@@ -903,21 +857,8 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN GUI MOTE HUB
+-- GIAO DIỆN MOTE HUB (GIỮ NGUYÊN GIAO DIỆN CŨ)
 --------------------------------------------------
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MoteHub_Beta301"
-screenGui.ResetOnSpawn = false
-
-pcall(function()
-    if gethui then
-        screenGui.Parent = gethui()
-    else
-        screenGui.Parent = CoreGui
-    end
-end)
-if not screenGui.Parent then screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
-
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
     gui.InputBegan:Connect(function(input)
@@ -1006,9 +947,6 @@ for i, name in ipairs(tabNames) do
     end)
 end
 
---------------------------------------------------
--- TOGGLE VÀ SLIDER UI
---------------------------------------------------
 local function createToggleSwitch(parent, labelText, flagName, posY, callback)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(0.96, 0, 0, 32); container.Position = UDim2.new(0.02, 0, 0, posY); container.BackgroundTransparency = 1; container.Parent = parent
@@ -1098,9 +1036,6 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
     return container
 end
 
---------------------------------------------------
--- NÚT NHẢY & ĐIỀU CHỈNH BAY
---------------------------------------------------
 local jumpButtonUI = Instance.new("TextButton")
 jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
 makeDraggable(jumpButtonUI)
@@ -1140,13 +1075,8 @@ btnUp.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
 btnDown.MouseButton1Down:Connect(function() flyVerticalSpeed = -25 end)
 btnDown.MouseButton1Up:Connect(function() flyVerticalSpeed = 0 end)
 
-local function updateFlyControlVisibility()
-    flyControlFrame.Visible = Flags.FlyCarpet or Flags.FreecamSoul
-end
+local function updateFlyControlVisibility() flyControlFrame.Visible = Flags.FlyCarpet or Flags.FreecamSoul end
 
---------------------------------------------------
--- NỘI DUNG TABS
---------------------------------------------------
 -- TAB 1
 createToggleSwitch(pages[1], Translations[Flags.Language].AntiAFK, "AntiAFK", 5)
 createToggleSwitch(pages[1], Translations[Flags.Language].MonsterNotify, "MonsterNotify", 40)
@@ -1257,7 +1187,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Mote Hub Đã Sẵn Sàng!",
+        Text = "Mote Hub ESP Fix Đã Sẵn Sàng!",
         Duration = 4
     })
 end)
