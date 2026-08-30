@@ -675,10 +675,7 @@ local function processObject(obj)
 
         -- CHỈNH SỬA: LỌC BỎ SÁCH TRANG TRÍ GIẢ TRÊN KỆ Ở PHÒNG 50 (CHỈ NHẬN SÁCH THỰC TẾ CÓ PROXIMITYPROMPT)
         if nameLower == "book" or (itemLabel and itemLabel:find("Sách")) then
-            local bookPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-            if not bookPrompt and obj.Parent then
-                bookPrompt = obj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
-            end
+            local bookPrompt = getObjectPrompt(obj)
             if not bookPrompt or not bookPrompt.Enabled then
                 itemLabel = nil -- Bỏ qua hoàn toàn các cuốn sách trang trí không tương tác được
             end
@@ -1315,3 +1312,4 @@ pcall(function()
         Duration = 4
     })
 end)
+```[cite: 2]
