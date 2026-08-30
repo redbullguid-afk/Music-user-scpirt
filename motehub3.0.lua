@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)[cite: 12, 13]
+-- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -40,7 +40,7 @@ pcall(function()
 end)
 
 --------------------------------------------------
--- CẤU HÌNH TRẠNG THÁI (FLAGS)[cite: 13]
+-- CẤU HÌNH TRẠNG THÁI (FLAGS)
 --------------------------------------------------
 local Flags = {
     AntiAFK = true,
@@ -81,13 +81,13 @@ local OriginalLighting = {
 }
 
 --------------------------------------------------
--- PALETTE MÀU THEME MENU & MÀU ESP[cite: 13]
+-- PALETTE MÀU THEME MENU & MÀU ESP
 --------------------------------------------------
 local Themes = {
     YellowBlack = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(255, 215, 0), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     RedBlack    = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(239, 68, 68), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
     GreenBlack  = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(34, 197, 94), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) },
-    PinkBlack   = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(236, 72, 153), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
+    PinkBlack   = { FrameBg = Color3.fromRGB(15, 15, 15), HeaderBg = Color3.fromRGB(25, 25, 25), Accent = Color3.fromRGB(236, 72, 153), InnerBg = Color3.fromRGB(28, 28, 28), Text = Color3.fromRGB(255, 255, 255) }
 }
 
 local ESPColors = {
@@ -105,7 +105,7 @@ local Translations = {
 }
 
 --------------------------------------------------
--- GIAO DIỆN MÀN HÌNH CHÍNH (SAFE PARENTING CHO MOBILE)[cite: 13]
+-- GIAO DIỆN MÀN HÌNH CHÍNH (SAFE PARENTING CHO MOBILE)
 --------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MoteHub_Beta301"
@@ -128,7 +128,7 @@ if not screenGui.Parent then
 end
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT[cite: 13]
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT
 --------------------------------------------------
 local ImportantItems = {
     ["keyobtain"] = "🔑 Chìa Khóa", ["key"] = "🔑 Chìa Khóa", ["masterkey"] = "🔑 Chìa Khóa Master",
@@ -139,8 +139,7 @@ local ImportantItems = {
     ["bandagepack"] = "🩹 Hộp Băng Gạc", ["batterypack"] = "🔋 Hộp Pin", ["bulklight"] = "🔦 Đèn Pin Công Nghiệp",
     ["laserpointer"] = "🔴 Đèn Laser", ["alarmclock"] = "⏰ Đồng Hồ Báo Thức", ["compass"] = "🧭 La Bàn",
     ["strafe"] = "🌟 Bình Starlight", ["pickaxe"] = "⛏️ Cuốc",
-    ["book"] = "📖 Sách (Cửa 50)",
-    ["livehint"] = "📖 Sách (Cửa 50)",
+    ["book"] = "📖 Sách Giải Đố (Cửa 50)",
     ["fuse"] = "⚡ Cầu Chì (Cửa 100 / Floor 2)",
     ["beer"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
     ["beerglass"] = "🍺 Cốc Bia (Phòng Gạt Cần)",
@@ -169,52 +168,28 @@ local function getItemLabel(name)
     return nil
 end
 
--- SỬA ESP CỬA: Chỉ nhận cửa có chữ số VD 001 hoặc A 0001, lọc bỏ hoàn toàn cửa giả/dupe
 local function isRealRoomDoor(obj)
-    if not obj or not (obj:IsA("Model") or obj:IsA("BasePart")) then return false end
-    local name = obj.Name:lower()
-    if not name:find("door") and obj.Name ~= "Door" and obj.Name ~= "DoorModel" then 
-        return false 
-    end
+    if not obj or not obj:IsA("Model") then return false end
+    if obj.Name ~= "Door" and obj.Name ~= "DoorModel" then return false end
     
-    -- Kiểm tra chống cửa giả / dupe
     for _, child in ipairs(obj:GetChildren()) do
         local cName = child.Name:lower()
         if cName:find("dupe") or cName:find("fake") then
             return false
         end
     end
-    local curr = obj.Parent
-    while curr and curr ~= Workspace do
-        local cName = curr.Name:lower()
-        if cName:find("dupe") or cName:find("fake") then
-            return false
-        end
-        curr = curr.Parent
-    end
     
-    -- Kiểm tra xem cửa có chứa chữ số định danh phòng (VD: 001 hoặc A 0001 hoặc thuộc phòng số)
-    local hasNumber = false
-    local checkStr = obj.Name
-    if obj.Parent then checkStr = checkStr .. " " .. obj.Parent.Name end
-    if obj:FindFirstChild("Sign") then checkStr = checkStr .. " " .. obj.Sign.Name end
-    
-    if checkStr:match("%d%d%d") or checkStr:match("A%s*%d+") or tonumber(obj.Parent and obj.Parent.Name) then
-        hasNumber = true
-    else
-        for _, d in ipairs(obj:GetDescendants()) do
-            if d:IsA("TextLabel") and (d.Text:match("%d") or d.Text:match("A%s*%d+")) then
-                hasNumber = true
-                break
-            end
+    if obj:FindFirstChild("Hidden") and not obj:FindFirstChild("Sign") and not obj:FindFirstChild("Lock") then
+        if obj.Parent and tonumber(obj.Parent.Name) then
+            return false 
         end
     end
     
-    return hasNumber
+    return true
 end
 
 --------------------------------------------------
--- HỆ THỐNG FONT SIZE REAL-TIME[cite: 13]
+-- HỆ THỐNG FONT SIZE REAL-TIME
 --------------------------------------------------
 local TextSizeRegister = {}
 local function registerTextLabel(label)
@@ -228,7 +203,7 @@ local function updateAllTextSizes()
 end
 
 --------------------------------------------------
--- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT[cite: 13]
+-- HÀM TƯƠNG TÁC SAFE PROXIMITY PROMPT
 --------------------------------------------------
 local function safeInteract(prompt)
     if not prompt or not prompt:IsA("ProximityPrompt") or not prompt.Enabled then return false end
@@ -246,7 +221,7 @@ local function safeInteract(prompt)
 end
 
 --------------------------------------------------
--- LOGIC AUTO MỞ TỦ & AUTO LOOT[cite: 13]
+-- LOGIC AUTO MỞ TỦ & AUTO LOOT
 --------------------------------------------------
 local activeDrawersCount = 0
 local MAX_SIMULTANEOUS_DRAWERS = 3
@@ -298,7 +273,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- LOGIC AUTO MỞ CỬA BẰNG KEY[cite: 13]
+-- LOGIC AUTO MỞ CỬA BẰNG KEY
 --------------------------------------------------
 task.spawn(function()
     while task.wait(0.2) do
@@ -329,7 +304,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM[cite: 13]
+-- TÍNH NĂNG SPEED HACK, NOCLIP & FREECAM
 --------------------------------------------------
 RunService.Stepped:Connect(function()
     if Flags.NoClip and LocalPlayer.Character then
@@ -462,7 +437,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 --------------------------------------------------
--- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG[cite: 13]
+-- HỆ THỐNG ESP QUẢN LÝ TẬP TRUNG
 --------------------------------------------------
 local TrackedESPs = setmetatable({}, { __mode = "k" })
 
@@ -489,7 +464,6 @@ local function getObjectPrompt(targetObj)
     return nil
 end
 
--- Kiểm tra vật phẩm còn hợp lệ và chưa bị nhặt (quét liên tục)
 local function isItemValidAndUncollected(targetObj)
     if not targetObj or not targetObj.Parent or not targetObj:IsDescendantOf(Workspace) then
         return false
@@ -497,15 +471,10 @@ local function isItemValidAndUncollected(targetObj)
 
     local current = targetObj
     while current and current ~= Workspace do
-        if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) or current:IsA("Backpack") then
+        if current:FindFirstChildOfClass("Humanoid") or Players:GetPlayerFromCharacter(current) then
             return false
         end
         current = current.Parent
-    end
-
-    local prompt = getObjectPrompt(targetObj)
-    if prompt and not prompt.Enabled then
-        return false
     end
 
     return true
@@ -615,7 +584,7 @@ local function createBillboard(targetObj, text, color, flagName)
 end
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ[cite: 13]
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ SỬA LỖI ESP SÁCH PHÒNG 50 CHÍNH XÁC 100%)
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -675,18 +644,7 @@ local function processObject(obj)
         if nameLower:find("giggle", 1, true) then detectedMonsterName = "Giggle"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("rushmoving", 1, true) or nameLower == "rush" then detectedMonsterName = "Rush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower:find("ambushmoving", 1, true) or nameLower == "ambush" then detectedMonsterName = "Ambush"; monsterModel = obj:IsA("Model") and obj or obj.Parent
-        -- LỌC CHUẨN 100% SEEK THẬT: Loại bỏ tranh ảnh mắt/tay, chỉ nhận model Seek thực tế
-        elseif nameLower == "seek" or nameLower:find("seekmoving") or nameLower == "seekrig" then
-            local potentialModel = obj:IsA("Model") and obj or obj.Parent
-            if potentialModel and potentialModel:IsA("Model") then
-                local pName = potentialModel.Name:lower()
-                if not pName:find("painting") and not pName:find("portrait") and not pName:find("canvas") and not pName:find("frame") and not pName:find("picture") then
-                    if potentialModel:FindFirstChildOfClass("Humanoid") or potentialModel:FindFirstChild("HumanoidRootPart") or potentialModel:FindFirstChild("RootPart") or potentialModel:FindFirstChild("Head") then
-                        detectedMonsterName = "Seek"
-                        monsterModel = potentialModel
-                    end
-                end
-            end
+        elseif nameLower:find("seekmoving", 1, true) or nameLower == "seekrig" or nameLower:find("seek", 1, true) then detectedMonsterName = "Seek"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower == "screech" then detectedMonsterName = "Screech"; monsterModel = obj:IsA("Model") and obj or obj.Parent
         elseif nameLower == "eyes" or nameLower == "eyesmoving" then
             if not isPartOfOtherMonster(obj) then
@@ -710,11 +668,23 @@ local function processObject(obj)
             return
         end
 
-        -- QUÉT VẬT PHẨM & SÁCH CỬA 50
+        -- QUÉT VẬT PHẨM CHÍNH XÁC 100% (BÊN TRONG TỦ, HỘC TỦ, KỆ, RƯƠNG, HỘP CÔNG CỤ)
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
 
+        -- CHỈNH SỬA: LỌC BỎ SÁCH TRANG TRÍ GIẢ TRÊN KỆ Ở PHÒNG 50 (CHỈ NHẬN SÁCH THỰC TẾ CÓ PROXIMITYPROMPT)
+        if nameLower == "book" or (itemLabel and itemLabel:find("Sách")) then
+            local bookPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+            if not bookPrompt and obj.Parent then
+                bookPrompt = obj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+            end
+            if not bookPrompt or not bookPrompt.Enabled then
+                itemLabel = nil -- Bỏ qua hoàn toàn các cuốn sách trang trí không tương tác được
+            end
+        end
+
+        -- Xác thực kỹ càng qua ProximityPrompt để tránh nhận nhầm vật thể cảnh/đá/vật phát sáng môi trường
         local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
         if not prompt and obj.Parent then
             prompt = obj.Parent:FindFirstChildWhichIsA("ProximityPrompt", true)
@@ -722,27 +692,19 @@ local function processObject(obj)
 
         if prompt and prompt.Enabled then
             local act = (prompt.ActionText or ""):lower()
-            local objObjName = obj.Name:lower()
-            local parentObjName = (obj.Parent and obj.Parent.Name:lower()) or ""
-            
-            if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") or act:find("claim") or act:find("read") or objObjName == "livehint" or parentObjName == "livehint" then
+            -- Kiểm tra hành động nhặt đồ hợp lệ (tránh nhận nhầm tủ hoặc cục đá không có hành động lấy)
+            if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") or act:find("claim") or act:find("open") then
                 if not itemLabel then
-                    if not (objObjName:find("drawer") or objObjName:find("chest") or objObjName:find("toolbox") or objObjName:find("shelf") or objObjName:find("closet") or objObjName:find("knob")) then
-                        itemLabel = getItemLabel(obj.Name) or getItemLabel(parentObjName) or "📦 Vật Phẩm"
+                    local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+                    -- Không gán nhãn cho chính cánh cửa tủ/hộc tủ trừ khi bên trong có chứa vật phẩm thực sự
+                    if not (nameLower:find("drawer") or nameLower:find("chest") or nameLower:find("toolbox") or nameLower:find("shelf") or nameLower:find("closet") or nameLower:find("knob")) then
+                        itemLabel = getItemLabel(obj.Name) or getItemLabel(parentName) or "📦 Vật Phẩm"
                     end
                 end
-            else
-                return
-            end
-        else
-            if obj.Name ~= "LiveHint" and not ImportantItems[obj.Name:lower()] then
-                return
-            end
-            if not itemLabel then
-                itemLabel = "📖 Sách (Cửa 50)"
             end
         end
 
+        -- Nếu vật phẩm nằm trong danh mục ImportantItems hợp lệ
         if itemLabel then
             local isHeld = false
             local ancestor = obj.Parent
@@ -764,29 +726,31 @@ local function processObject(obj)
             createBillboard(obj, "🚪 Cửa", ESPColors.Door, "ESPDoor")
         end
 
-        -- SỬA ESP CẦN GẠT / CÔNG TẮC & BREAKER BOX
-        if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) or nameLower:find("fuse", 1, true) or nameLower:find("valve", 1, true) then
-            createBillboard(obj, "🕹️ Cần Gạt / Công Tắc", ESPColors.Lever, "ESPLever")
+        if nameLower:find("lever", 1, true) or nameLower:find("breaker", 1, true) or nameLower:find("switch", 1, true) then
+            createBillboard(obj, "🕹️ Cần Gạt / Cầu Chì", ESPColors.Lever, "ESPLever")
         end
 
-        -- SỬA ESP RƯƠNG ĐỒ (CHEST)
-        if nameLower:find("chest", 1, true) or nameLower == "lootbox" or nameLower:find("lootbox", 1, true) then
+        if nameLower:find("chest", 1, true) or nameLower == "lootbox" then
             createBillboard(obj, "📦 Rương Đồ", ESPColors.Chest, "ESPChest")
         end
     end)
 end
 
+-- Tránh lag và crash trên thiết bị di động khi quét Workspace ban đầu
 task.spawn(function()
     pcall(function()
-        for _, obj in ipairs(Workspace:GetDescendants()) do 
+        for _, obj in ipairs(Workspace:GetChildren()) do 
             processObject(obj)
+            for _, child in ipairs(obj:GetChildren()) do
+                processObject(child)
+            end
         end
     end)
 end)
 Workspace.DescendantAdded:Connect(processObject)
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI (CHỈ HIGHLIGHT, TÊN, THANH MÁU, DÂY NỐI)[cite: 13]
+-- ESP NGƯỜI CHƠI
 --------------------------------------------------
 local function getHealthColor(percent)
     if percent >= 0.9 then
@@ -857,11 +821,12 @@ local function setupFullPlayerESP(plr)
 
         bb.Parent = head
 
-        local line
+        local box, line
         if HasDrawing then
             pcall(function()
                 local DrawingLib = getGlobal("Drawing")
                 if DrawingLib and typeof(DrawingLib.new) == "function" then
+                    box = DrawingLib.new("Square"); box.Visible = false; box.Color = ESPColors.Player; box.Thickness = 1.5; box.Filled = false
                     line = DrawingLib.new("Line"); line.Visible = false; line.Thickness = 1.5
                 end
             end)
@@ -874,6 +839,9 @@ local function setupFullPlayerESP(plr)
                 if bb and bb.Parent then bb:Destroy() end
                 if HasDrawing then
                     pcall(function() 
+                        if box then 
+                            if typeof(box.Destroy) == "function" then box:Destroy() elseif typeof(box.Remove) == "function" then box:Remove() end
+                        end 
                         if line then 
                             if typeof(line.Destroy) == "function" then line:Destroy() elseif typeof(line.Remove) == "function" then line:Remove() end
                         end 
@@ -900,27 +868,34 @@ local function setupFullPlayerESP(plr)
                     healthFill.BackgroundColor3 = currentHealthColor
                 end
 
-                if HasDrawing and line then
+                if HasDrawing and box then
                     pcall(function()
                         local targetPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
                         if onScreen then
-                            if localHrp then
-                                local myPos, myOnScreen = Camera:WorldToViewportPoint(localHrp.Position)
-                                if myOnScreen then
+                            local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                            local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                            local height = math.abs(headPos.Y - legPos.Y)
+                            local width = height / 1.5
+
+                            box.Size = Vector2.new(width, height)
+                            box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
+                            box.Visible = true
+                            
+                            if line then
+                                if localHrp then
+                                    local myPos, _ = Camera:WorldToViewportPoint(localHrp.Position)
                                     line.From = Vector2.new(myPos.X, myPos.Y)
                                 else
                                     local viewportSize = Camera.ViewportSize
                                     line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
                                 end
-                            else
-                                local viewportSize = Camera.ViewportSize
-                                line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
+                                line.To = Vector2.new(targetPos.X, targetPos.Y)
+                                line.Color = currentHealthColor
+                                line.Visible = true
                             end
-                            line.To = Vector2.new(targetPos.X, targetPos.Y)
-                            line.Color = currentHealthColor
-                            line.Visible = true
                         else
-                            line.Visible = false
+                            box.Visible = false
+                            if line then line.Visible = false end
                         end
                     end)
                 end
@@ -928,6 +903,7 @@ local function setupFullPlayerESP(plr)
                 hl.Enabled = false; bb.Enabled = false
                 if HasDrawing then
                     pcall(function() 
+                        if box then box.Visible = false end
                         if line then line.Visible = false end
                     end)
                 end
@@ -943,7 +919,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT[cite: 13]
+-- ANTI-AFK & FULLBRIGHT (ĐÃ SỬA LỖI TẮT VẪN GIỮ TRẠNG THÁI SÁNG)
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -1006,7 +982,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- GIAO DIỆN MOTE HUB[cite: 13]
+-- GIAO DIỆN MOTE HUB
 --------------------------------------------------
 local function makeDraggable(gui)
     local dragging, dragInput, dragStart, startPos
@@ -1234,7 +1210,7 @@ createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 1
 
 -- TAB 2
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
-createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm & Sách Cửa 50", "ESPItems", 40)
+createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Tủ, Kệ, Rương, Hộp)", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Floor 2)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
 createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
@@ -1311,7 +1287,7 @@ btnVie.MouseButton1Click:Connect(function() Flags.Language = "VIE"; refreshLangu
 btnEng.MouseButton1Click:Connect(function() Flags.Language = "ENG"; refreshLanguage() end)
 
 --------------------------------------------------
--- MỞ / TẮT MENU[cite: 13]
+-- MỞ / TẮT MENU
 --------------------------------------------------
 local isMenuAnimating = false
 circleBtn.MouseButton1Click:Connect(function()
@@ -1335,7 +1311,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Đã fix lỗi ESP Cửa, Rương, Cần gạt, Seek và Dây nối người chơi!",
+        Text = "Đã sửa lỗi ESP Sách Phòng 50 & chuẩn hóa vật phẩm!",
         Duration = 4
     })
 end)
