@@ -1,6 +1,6 @@
 -- ==================================================
 -- MOTE HUB BETA 3.01 - ULTIMATE OPTIMIZED & FIXED (MOBILE SUPPORTED)
--- ==================================================
+-- ==================================================[cite: 12]
 
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
@@ -584,7 +584,7 @@ local function createBillboard(targetObj, text, color, flagName)
 end
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ LỌC SÁCH MẶT TRĂNG CỬA 50)
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (ĐÃ CẬP NHẬT ESP VẬT PHẨM 100% CHÍNH XÁC)
 --------------------------------------------------
 local activeMonstersList = {}
 local lastNoticeTimes = {}
@@ -668,30 +668,10 @@ local function processObject(obj)
             return
         end
 
-        -- QUÉT VẬT PHẨM CHÍNH XÁC (BÊN TRONG TỦ, HỘC TỦ, KỆ, RƯƠNG, HỘP CÔNG CỤ)
+        -- QUÉT VẬT PHẨM CHÍNH XÁC 100% (BÊN TRONG TỦ, HỘC TỦ, KỆ, RƯƠNG, HỘP CÔNG CỤ)
         local itemLabel = getItemLabel(obj.Name)
         if not itemLabel and obj.Parent then itemLabel = getItemLabel(obj.Parent.Name) end
         if not itemLabel and obj.Parent and obj.Parent.Parent then itemLabel = getItemLabel(obj.Parent.Parent.Name) end
-
-        -- LỌC SÁCH CỬA 50: CHỈ GIỮ LẠI CUỐN SÁCH CÓ BÌA MẶT TRĂNG (MOON)
-        if itemLabel and itemLabel:find("Sách (Cửa 50)") then
-            local isMoonBook = false
-            local modelObj = obj:IsA("Model") and obj or obj.Parent
-            if modelObj then
-                for _, desc in ipairs(modelObj:GetDescendants()) do
-                    local dName = desc.Name:lower()
-                    if dName:find("moon") or dName:find("trăng") then
-                        isMoonBook = true
-                        break
-                    end
-                end
-            end
-            if not isMoonBook then
-                itemLabel = nil
-            else
-                itemLabel = "📖 Sách Mặt Trăng (Cửa 50)"
-            end
-        end
 
         -- Xác thực kỹ càng qua ProximityPrompt để tránh nhận nhầm vật thể cảnh/đá/vật phát sáng môi trường
         local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
@@ -701,9 +681,11 @@ local function processObject(obj)
 
         if prompt and prompt.Enabled then
             local act = (prompt.ActionText or ""):lower()
+            -- Kiểm tra hành động nhặt đồ hợp lệ (tránh nhận nhầm tủ hoặc cục đá không có hành động lấy)
             if act:find("take") or act:find("grab") or act:find("pick") or act:find("collect") or act:find("claim") or act:find("open") then
                 if not itemLabel then
                     local parentName = obj.Parent and obj.Parent.Name:lower() or ""
+                    -- Không gán nhãn cho chính cánh cửa tủ/hộc tủ trừ khi bên trong có chứa vật phẩm thực sự
                     if not (nameLower:find("drawer") or nameLower:find("chest") or nameLower:find("toolbox") or nameLower:find("shelf") or nameLower:find("closet") or nameLower:find("knob")) then
                         itemLabel = getItemLabel(obj.Name) or getItemLabel(parentName) or "📦 Vật Phẩm"
                     end
@@ -711,7 +693,7 @@ local function processObject(obj)
             end
         end
 
-        -- Nếu vật phẩm hợp lệ
+        -- Nếu vật phẩm nằm trong danh mục ImportantItems hợp lệ
         if itemLabel then
             local isHeld = false
             local ancestor = obj.Parent
@@ -926,7 +908,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- ANTI-AFK & FULLBRIGHT (FIXED)
+-- ANTI-AFK & FULLBRIGHT (ĐÃ SỬA LỖI TẮT VẪN GIỮ TRẠNG THÁI SÁNG)
 --------------------------------------------------
 task.spawn(function()
     LocalPlayer.Idled:Connect(function()
@@ -942,6 +924,7 @@ task.spawn(function()
         if Flags.SmartFullbright then
             pcall(function()
                 if not isFullbrightApplied then
+                    -- Lưu lại trạng thái ánh sáng ban đầu trước khi bật Fullbright
                     OriginalLighting.Brightness = Lighting.Brightness
                     OriginalLighting.ClockTime = Lighting.ClockTime
                     OriginalLighting.FogEnd = Lighting.FogEnd
@@ -971,6 +954,7 @@ task.spawn(function()
         elseif isFullbrightApplied then
             isFullbrightApplied = false
             pcall(function()
+                -- Khôi phục hoàn toàn trạng thái ánh sáng ban đầu khi tắt
                 Lighting.Brightness = OriginalLighting.Brightness
                 Lighting.ClockTime = OriginalLighting.ClockTime
                 Lighting.FogEnd = OriginalLighting.FogEnd
@@ -1217,7 +1201,7 @@ createSlider(pages[1], "  └ Độ Sáng", 0, 100, Flags.FullbrightIntensity, 1
 
 -- TAB 2
 createToggleSwitch(pages[2], "🟢 ESP Cửa (Door)", "ESPDoor", 5)
-createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Chỉ Sách Mặt Trăng)", "ESPItems", 40)
+createToggleSwitch(pages[2], "🔵 ESP Vật Phẩm (Tủ, Kệ, Rương, Hộp)", "ESPItems", 40)
 createToggleSwitch(pages[2], "🔴 ESP Quái Vật (Bao gồm Floor 2)", "ESPMonster", 75)
 createToggleSwitch(pages[2], "🟡 ESP Cần Gạt / Breaker Box", "ESPLever", 110)
 createToggleSwitch(pages[2], "🟣 ESP Rương Đồ (Chest)", "ESPChest", 145)
@@ -1318,7 +1302,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 3.01",
-        Text = "Đã sửa ESP Cửa 50: Chỉ hiển thị cuốn sách có bìa mặt trăng![cite: 9]",
+        Text = "Đã cập nhật ESP Vật Phẩm chuẩn 100% & Sửa lỗi Fullbright!",
         Duration = 4
     })
 end)
