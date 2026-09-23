@@ -41,7 +41,7 @@ local Flags = {
     SpeedMultiplier = 1.0,
     FreecamSoul = false,
     FlyCarpet = false,
-    BypassFigureSeek = false, -- Thêm Flag Bypass
+    BypassFigureSeek = false,
     
     Language = "VIE",
     Theme = "YellowBlack",
@@ -82,26 +82,18 @@ local Translations = {
 }
 
 --------------------------------------------------
--- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (CẬP NHẬT FLOOR 1 & FLOOR 2)
+-- BẢNG DỮ LIỆU VẬT THỂ VÀ QUÁI VẬT (FLOOR 1 & FLOOR 2)
 --------------------------------------------------
 local ImportantItems = {
-    -- Key & Quest Items
     ["KeyObtain"] = "🔑 Chìa Khóa", ["Key"] = "🔑 Chìa Khóa", ["MasterKey"] = "🔑 Chìa Khóa Master",
     ["SkeletonKey"] = "💀 Chìa Khóa Đầu Lâu", ["LiveHintBook"] = "📘 Sách", ["FuseInPlainSight"] = "🔋 Cầu Chì",
     ["Fuse"] = "🔋 Cầu Chì", ["Placard"] = "📜 Tấm Bảng", ["Anchor"] = "⚓ Mỏ Neo", ["MinesKey"] = "🔑 Chìa Khóa Mỏ",
-    
-    -- Floor 1 Light & Healing (Đã xoá Lighter/Bật lửa)
     ["Flashlight"] = "🔦 Đèn Pin", ["Candle"] = "🕯️ Nến", ["Crucifix"] = "✝️ Cây Thánh Giá",
     ["Lockpick"] = "🗝️ Lockpick", ["Bandage"] = "🩹 Băng Gạc", ["Vitamins"] = "💊 Vitamin",
-    ["Battery"] = "🔋 Pin",
-    
-    -- Floor 2 Items (The Mines)
-    ["Bulklight"] = "🔦 Đèn Pin Sạc", ["Glowstick"] = "🧪 Đèn Rồng (Glowstick)",
+    ["Battery"] = "🔋 Pin", ["Bulklight"] = "🔦 Đèn Pin Sạc", ["Glowstick"] = "🧪 Đèn Rồng (Glowstick)",
     ["LaserPointer"] = "🔴 Đèn Laser", ["BigBattery"] = "🔋 Pin Lớn", ["Planks"] = "🪵 Ván Gỗ",
     ["StrafeSugar"] = "🍬 Kẹo Tốc Độ", ["Candy"] = "🍬 Kẹo", ["AlarmClock"] = "⏰ Đồng Hồ Báo Thức",
     ["Shears"] = "✂️ Kéo Cắt Tường", ["GigaGlowstick"] = "✨ Glowstick Khổng Lồ",
-    
-    -- Currency
     ["Gold"] = "💰 Tiền Gold", ["Coin"] = "🪙 Tiền Xu", ["GoldPile"] = "💰 Đống Vàng"
 }
 
@@ -256,7 +248,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- LOGIC BYPASS (FIGURE & SEEK): QUÉT LIÊN TỤC ĐẶT TỐC ĐỘ THÀNH 0
     if Flags.BypassFigureSeek then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") then
@@ -408,7 +399,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- ESP NGƯỜI CHƠI & DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT
+-- ESP NGƯỜI CHƠI & DÂY NỐI
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -518,7 +509,7 @@ for _, p in ipairs(Players:GetPlayers()) do setupFullPlayerESP(p) end
 Players.PlayerAdded:Connect(setupFullPlayerESP)
 
 --------------------------------------------------
--- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ (KÈM SOI HỘC TỦ/KỆ TỦ CHƯA MỞ)
+-- CẢNH BÁO QUÁI VẬT & QUÉT VẬT THỂ
 --------------------------------------------------
 local notifiedMonsters = {}
 local lastNoticeTimes = {}
@@ -547,7 +538,6 @@ local function triggerSmartMonsterNotice(monsterObj, rawMonsterName)
     end)
 end
 
--- Hàm hỗ trợ đọc vật phẩm ẩn trong Tủ/Hộc/Rương chưa mở
 local function checkHiddenDrawerLoot(containerObj)
     pcall(function()
         local nameLower = containerObj.Name:lower()
@@ -561,7 +551,6 @@ local function checkHiddenDrawerLoot(containerObj)
 
         local foundItemName = nil
 
-        -- Cách 1: Quét ProximityPrompt ẩn hoặc text nhắc lệnh
         for _, prompt in ipairs(containerObj:GetDescendants()) do
             if prompt:IsA("ProximityPrompt") then
                 local objText = prompt.ObjectText or ""
@@ -582,7 +571,6 @@ local function checkHiddenDrawerLoot(containerObj)
             end
         end
 
-        -- Cách 2: Quét Attributes/Value (Cơ chế DOORS lưu trữ đồ ẩn)
         if not foundItemName then
             local attrVal = containerObj:GetAttribute("Item") or containerObj:GetAttribute("Loot") or containerObj:GetAttribute("Container")
             if attrVal and ImportantItems[tostring(attrVal)] then
@@ -590,7 +578,6 @@ local function checkHiddenDrawerLoot(containerObj)
             end
         end
 
-        -- Cách 3: Quét các Model con chớm khởi tạo
         if not foundItemName then
             for _, child in ipairs(containerObj:GetChildren()) do
                 if ImportantItems[child.Name] then
@@ -617,7 +604,6 @@ local function processObject(obj)
             if not (nameLower:find("moving") or nameLower:find("rig") or obj:IsA("Model")) then return end
         end
 
-        -- Scans Container Tủ/Kệ/Rương ẩn
         checkHiddenDrawerLoot(obj)
 
         if (obj.Name == "Door" or nameLower == "door") and obj:IsA("Model") and not obj:FindFirstChild("Mote_ESP_ESPDoor", true) then
@@ -641,7 +627,6 @@ local function processObject(obj)
             end
         end
 
-        -- Monster Detection (Floor 1 & Floor 2)
         local detectedMonsterName = nil
         if nameLower:find("rushmoving") or nameLower == "rush" then detectedMonsterName = "Rush"
         elseif nameLower:find("ambushmoving") or nameLower == "ambush" then detectedMonsterName = "Ambush"
@@ -669,7 +654,6 @@ local function processObject(obj)
             triggerSmartMonsterNotice(obj, detectedMonsterName)
         end
 
-        -- Regular Items Detection
         if ImportantItems[obj.Name] and not obj:FindFirstChild("Mote_ESP_ESPItems", true) then
             local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
             if targetPart then createBillboard(targetPart, ImportantItems[obj.Name], ESPColors.Items, "ESPItems") end
@@ -906,7 +890,7 @@ local function createSlider(parent, labelText, minVal, maxVal, currentVal, posY,
 end
 
 --------------------------------------------------
--- NÚT NHẢY VÀ NÚT ĐIỀU CHỈNH ĐỘ CAO (BAY / KHẢM GIẢ)
+-- NÚT NHẢY VÀ NÚT ĐIỀU CHỈNH ĐỘ CAO
 --------------------------------------------------
 local jumpButtonUI = Instance.new("TextButton")
 jumpButtonUI.Size = UDim2.new(0, 55, 0, 55); jumpButtonUI.Position = UDim2.new(0.85, 0, 0.7, 0); jumpButtonUI.BackgroundColor3 = Color3.fromRGB(20, 20, 20); jumpButtonUI.TextColor3 = Color3.fromRGB(255, 255, 255); jumpButtonUI.Text = "NHẢY"; jumpButtonUI.Font = Enum.Font.GothamBold; jumpButtonUI.TextSize = 12; jumpButtonUI.Visible = false; jumpButtonUI.Parent = screenGui
@@ -948,54 +932,55 @@ local function updateFlyControlVisibility()
 end
 
 --------------------------------------------------
--- TÍNH NĂNG HỒI SINH PLAYER DOORS (TÍNH NĂNG CHUẨN MỚI)
+-- TÍNH NĂNG HỒI SINH PLAYER DOORS (BỎ BƯỚC ROBUX)
 --------------------------------------------------
 local function reviveTargetPlayer(targetPlr)
     if not targetPlr then return end
     
-    -- Thử kích hoạt qua Remotes chuẩn của DOORS
-    local reviveRemotes = {
-        ReplicatedStorage:FindFirstChild("RemotesFolder") and ReplicatedStorage.RemotesFolder:FindFirstChild("Revive"),
-        ReplicatedStorage:FindFirstChild("EntityInfo") and ReplicatedStorage.EntityInfo:FindFirstChild("Revive"),
-        ReplicatedStorage:FindFirstChild("Revive"),
-        ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Revive")
-    }
-
-    local executedRemote = false
-    for _, remote in ipairs(reviveRemotes) do
-        if remote and remote:IsA("RemoteEvent") then
-            pcall(function()
-                remote:FireServer(targetPlr)
-                executedRemote = true
-            end)
-            if executedRemote then break end
-        end
-    end
-
-    -- Nếu không bắn được Remote Event, chuyển sang tương tác ProximityPrompt trực tiếp
-    if not executedRemote then
-        local targetChar = targetPlr.Character
-        if targetChar then
-            local prompt = targetChar:FindFirstChildWhichIsA("ProximityPrompt", true) or Workspace:FindFirstChild("RevivePrompt_" .. targetPlr.Name, true)
-            if prompt then
-                local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-                
-                if myHrp and targetHrp then
-                    local oldPos = myHrp.CFrame
-                    myHrp.CFrame = targetHrp.CFrame + Vector3.new(0, 2, 0)
-                    task.wait(0.1)
-                    safeInteract(prompt)
-                    task.wait(0.2)
-                    myHrp.CFrame = oldPos
-                else
-                    safeInteract(prompt)
-                end
+    -- Tương tác trực tiếp thông qua Prompt/Bypass không tốn Robux
+    local targetChar = targetPlr.Character
+    if targetChar then
+        local prompt = targetChar:FindFirstChildWhichIsA("ProximityPrompt", true) or Workspace:FindFirstChild("RevivePrompt_" .. targetPlr.Name, true)
+        
+        if prompt then
+            local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+            
+            if myHrp and targetHrp then
+                local oldPos = myHrp.CFrame
+                myHrp.CFrame = targetHrp.CFrame + Vector3.new(0, 2, 0)
+                task.wait(0.1)
+                safeInteract(prompt)
+                task.wait(0.2)
+                myHrp.CFrame = oldPos
             else
+                safeInteract(prompt)
+            end
+        else
+            -- Thử kích hoạt trực tiếp Remote Event trong game nếu prompt bị ẩn
+            local reviveRemotes = {
+                ReplicatedStorage:FindFirstChild("RemotesFolder") and ReplicatedStorage.RemotesFolder:FindFirstChild("Revive"),
+                ReplicatedStorage:FindFirstChild("EntityInfo") and ReplicatedStorage.EntityInfo:FindFirstChild("Revive"),
+                ReplicatedStorage:FindFirstChild("Revive"),
+                ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Revive")
+            }
+
+            local success = false
+            for _, remote in ipairs(reviveRemotes) do
+                if remote and remote:IsA("RemoteEvent") then
+                    pcall(function()
+                        remote:FireServer(targetPlr)
+                        success = true
+                    end)
+                    if success then break end
+                end
+            end
+
+            if not success then
                 pcall(function()
                     StarterGui:SetCore("SendNotification", {
                         Title = "HỒI SINH",
-                        Text = "Không tìm thấy tương tác hồi sinh cho " .. targetPlr.DisplayName,
+                        Text = "Không tìm thấy người chơi cần hồi sinh hoặc họ đã thoát!",
                         Duration = 3
                     })
                 end)
@@ -1039,7 +1024,7 @@ createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet"
 end)
 createToggleSwitch(pages[4], Translations[Flags.Language].BypassFS, "BypassFigureSeek", 225)
 
--- CẬP NHẬT TAB THỬ NGHIỆM: KHU VỰC HỒI SINH NGƯỜI CHƠI DOORS
+-- KHU VỰC HỒI SINH NGƯỜI CHƠI (GIỮ NGUYÊN GIAO DIỆN)
 local reviveHeader = Instance.new("TextLabel")
 reviveHeader.Size = UDim2.new(0.96, 0, 0, 22)
 reviveHeader.Position = UDim2.new(0.02, 0, 0, 265)
@@ -1095,7 +1080,6 @@ local function updateRevivePlayerList()
             btnCorner.CornerRadius = UDim.new(0, 4)
             btnCorner.Parent = btn
 
-            -- Sự kiện Bấm chuột / Chạm cảm ứng
             btn.MouseButton1Click:Connect(function()
                 reviveTargetPlayer(plr)
             end)
@@ -1202,7 +1186,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.92",
-        Text = "Đã cập nhật tính năng Hồi Sinh Player trong Tab Thử Nghiệm!",
+        Text = "Đã cập nhật tính năng Hồi Sinh Player không tốn Robux!",
         Duration = 5
     })
 end)
