@@ -1,6 +1,6 @@
 -- ==================================================
 -- MOTE HUB BETA 2.92 - FREECAM FIXED & TRACER ESP
--- ==================================================[cite: 2]
+-- ==================================================
 
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
@@ -216,7 +216,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG TỐC ĐỘ (ĐÃ SỬA XUNG ĐỘT VITAMIN & CỘNG DỒN), NOCLIP & BAY SÁNG TẠO
+-- TÍNH NĂNG TỐC ĐỘ, NOCLIP & BAY SÁNG TẠO
 --------------------------------------------------
 RunService.RenderStepped:Connect(function(dt)
     if LocalPlayer.Character then
@@ -227,9 +227,7 @@ RunService.RenderStepped:Connect(function(dt)
             if humanoid.MoveDirection.Magnitude > 0 then
                 local extraSpeedMultiplier = Flags.SpeedMultiplier - 1
                 if extraSpeedMultiplier > 0 then
-                    -- Sử dụng Humanoid.WalkSpeed hiện tại để cộng dồn mượt mà khi uống Vitamin mà không bị xung đột
-                    local currentSpeed = humanoid.WalkSpeed
-                    local moveDelta = humanoid.MoveDirection * currentSpeed * extraSpeedMultiplier * dt
+                    local moveDelta = humanoid.MoveDirection * (16 * extraSpeedMultiplier) * dt
                     hrp.CFrame = hrp.CFrame + moveDelta
                 end
             end
@@ -303,6 +301,7 @@ local function setFreecamState(state)
         end
         freecamPart.CFrame = Camera.CFrame
 
+        -- Giữ CameraType Custom để người dùng có thể xoay màn hình tự do trên điện thoại
         Camera.CameraSubject = freecamPart
         Camera.CameraType = Enum.CameraType.Custom
         isFreecamActive = true
@@ -328,7 +327,10 @@ RunService.RenderStepped:Connect(function(dt)
         local moveDir = humanoid and humanoid.MoveDirection or Vector3.new(0, 0, 0)
         local speed = 25 * Flags.SpeedMultiplier
         
+        -- Chỉ lấy hướng di chuyển trên mặt phẳng XZ (Triệt tiêu trục Y để không bị bay lên/xuống khi tiến lùi)
         local horizontalMove = Vector3.new(moveDir.X, 0, moveDir.Z)
+        
+        -- Độ cao chỉ được quyết định duy nhất bởi nút bấm ▲ / ▼ (flyVerticalSpeed)
         local verticalMove = Vector3.new(0, flyVerticalSpeed, 0) * dt
         
         freecamPart.Position = freecamPart.Position + (horizontalMove * speed * dt) + verticalMove
@@ -373,25 +375,7 @@ local function createBillboard(targetPart, text, color, flagName)
 end
 
 --------------------------------------------------
--- HÀM XÁC ĐỊNH MÀU THANH MÁU PLAYER THEO % YÊU CẦU
---------------------------------------------------
-local function getPlayerHealthColor(health, maxHealth)
-    local pct = maxHealth > 0 and (health / maxHealth) * 100 or 100
-    if pct >= 90 then
-        return Color3.fromRGB(0, 255, 0)     -- 100: Xanh lá sáng
-    elseif pct >= 70 then
-        return Color3.fromRGB(60, 179, 113) -- 80: Xanh lá thẫn (trầm)
-    elseif pct >= 40 then
-        return Color3.fromRGB(255, 255, 0) -- 50: Vàng sáng
-    elseif pct >= 20 then
-        return Color3.fromRGB(255, 140, 0) -- 30: Cam sáng
-    else
-        return Color3.fromRGB(255, 0, 0)     -- 10: Đỏ sáng
-    end
-end
-
---------------------------------------------------
--- ESP NGƯỜI CHƠI & DÂY NỐI TỪ THÂN NGƯỜI DÙNG SCRIPT (MÀU THEO MÁU PLAYER)
+-- ESP NGƯỜI CHƠI & DÂY NỐI TRỰC TIẾP TỪ THÂN NHÂN VẬT
 --------------------------------------------------
 local function setupFullPlayerESP(plr)
     if plr == LocalPlayer then return end
@@ -400,8 +384,7 @@ local function setupFullPlayerESP(plr)
         if not char then return end
         local hrp = char:WaitForChild("HumanoidRootPart", 5)
         local head = char:WaitForChild("Head", 5)
-        local humanoid = char:WaitForChild("Humanoid", 5)
-        if not hrp or not head or not humanoid then return end
+        if not hrp or not head then return end
 
         local hl = char:FindFirstChild("Mote_Player_Highlight") or Instance.new("Highlight")
         hl.Name = "Mote_Player_Highlight"
@@ -415,7 +398,7 @@ local function setupFullPlayerESP(plr)
         local bb = head:FindFirstChild("Mote_Player_Billboard") or Instance.new("BillboardGui")
         bb.Name = "Mote_Player_Billboard"
         bb.Adornee = head
-        bb.Size = UDim2.new(0, 160, 0, 35)
+        bb.Size = UDim2.new(0, 160, 0, 30)
         bb.StudsOffset = Vector3.new(0, 2.5, 0)
         bb.AlwaysOnTop = true
 
@@ -424,7 +407,7 @@ local function setupFullPlayerESP(plr)
         label.BackgroundTransparency = 1
         label.TextStrokeTransparency = 0
         label.Font = Enum.Font.SourceSansBold
-        label.TextSize = 13
+        label.TextSize = 14
         label.TextColor3 = ESPColors.Player
         label.Parent = bb
         bb.Parent = head
@@ -437,7 +420,7 @@ local function setupFullPlayerESP(plr)
 
         local renderConnection
         renderConnection = RunService.RenderStepped:Connect(function()
-            if not char or not char.Parent or not hrp or not hrp.Parent or not Players:FindFirstChild(plr.Name) or humanoid.Health <= 0 then
+            if not char or not char.Parent or not hrp or not hrp.Parent or not Players:FindFirstChild(plr.Name) then
                 hl:Destroy(); bb:Destroy(); box:Remove(); line:Remove()
                 if renderConnection then renderConnection:Disconnect() end
                 return
@@ -449,17 +432,9 @@ local function setupFullPlayerESP(plr)
                 local localChar = LocalPlayer.Character
                 local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
 
-                -- Cập nhật màu sắc dây nối, hộp và chữ theo % thanh máu của player
-                local hpColor = getPlayerHealthColor(humanoid.Health, humanoid.MaxHealth)
-                hl.FillColor = hpColor
-                box.Color = hpColor
-                line.Color = hpColor
-                label.TextColor3 = hpColor
-
                 if localHrp then
                     local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
-                    local hpPercent = math.floor((humanoid.Health / humanoid.MaxHealth) * 100 + 0.5)
-                    label.Text = string.format("👤 %s\nHP: %d%% | [%d studs]", plr.DisplayName, hpPercent, dist)
+                    label.Text = string.format("👤 %s\n[%d studs]", plr.DisplayName, dist)
                 end
 
                 local targetPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
@@ -474,7 +449,6 @@ local function setupFullPlayerESP(plr)
                     box.Position = Vector2.new(targetPos.X - width / 2, targetPos.Y - height / 2)
                     box.Visible = true
 
-                    -- Dây nối xuất phát từ thân người dùng script (HumanoidRootPart của LocalPlayer) nối đến player được ESP
                     local startScreenPos = nil
                     if isFreecamActive and freecamPart then
                         local startPos3D, startOnScreen = Camera:WorldToViewportPoint(freecamPart.Position)
@@ -989,8 +963,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.92",
-        Text = "Đã cập nhật dây ESP theo màu máu & fix speed hack vitamin!",
+        Text = "Đã fix lỗi Khảm Giả & hỗ trợ xoay màn hình!",
         Duration = 5
     })
 end)
-```[cite: 2]
