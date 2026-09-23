@@ -40,6 +40,7 @@ local Flags = {
     SpeedMultiplier = 1.0,
     FreecamSoul = false,
     FlyCarpet = false,
+    BypassFigureSeek = false, -- Thêm Flag Bypass
     
     Language = "VIE",
     Theme = "YellowBlack",
@@ -75,8 +76,8 @@ local ESPColors = {
 }
 
 local Translations = {
-    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.92" },
-    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.92" }
+    VIE = { Main = "Main", ESP = "ESP", Automation = "Tự Động", Experimental = "Thử Nghiệm", Settings = "Cài Đặt", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Cảnh Báo Quái Vật", Fullbright = "3. Nhìn Trong Bóng Tối", AutoDrawers = "1. Auto Mở Tủ (3 Tủ) & Loot Đồ", AutoDoorKey = "2. Auto Mở Cửa Bằng Key", NoClip = "1. NoClip (Xuyên Tường)", Jump = "2. Nút Nhảy DOORS", Speed = "3. Speed Hack (Max x4)", Freecam = "4. Khảm Giả (Linh Hồn Tách Xác)", FlyCarpet = "5. Bay Sáng Tạo", BypassFS = "6. Bypass (Figure & Seek)", ThemeTitle = "1. Đổi Màu Menu", LangTitle = "2. Ngôn Ngữ", FontSizeTitle = "3. Kích Thước Chữ", Author = "Tác Giả: By Mờ Tê", Facebook = "Facebook: Nguyễn minh tân", Version = "Phiên Bản: Mote Hub Beta 2.92" },
+    ENG = { Main = "Main", ESP = "ESP", Automation = "Automation", Experimental = "Experimental", Settings = "Settings", AntiAFK = "1. Anti-AFK", MonsterNotify = "2. Smart Monster Notify", Fullbright = "3. Fullbright", AutoDrawers = "1. Auto Open 3 Drawers & Auto Loot", AutoDoorKey = "2. Auto Key Door", NoClip = "1. NoClip", Jump = "2. DOORS Jump Button", Speed = "3. Speed Hack (Up to x4)", Freecam = "4. Freecam Soul (Spectate Fly)", FlyCarpet = "5. Creative Fly", BypassFS = "6. Bypass (Figure & Seek)", ThemeTitle = "1. Change Theme", LangTitle = "2. Language", FontSizeTitle = "3. Text Size", Author = "Author: By Mote", Facebook = "Facebook: Nguyen minh tan", Version = "Version: Mote Hub Beta 2.92" }
 }
 
 --------------------------------------------------
@@ -88,10 +89,10 @@ local ImportantItems = {
     ["SkeletonKey"] = "💀 Chìa Khóa Đầu Lâu", ["LiveHintBook"] = "📘 Sách", ["FuseInPlainSight"] = "🔋 Cầu Chì",
     ["Fuse"] = "🔋 Cầu Chì", ["Placard"] = "📜 Tấm Bảng", ["Anchor"] = "⚓ Mỏ Neo", ["MinesKey"] = "🔑 Chìa Khóa Mỏ",
     
-    -- Floor 1 Light & Healing
+    -- Floor 1 Light & Healing (Đã xoá Lighter/Bật lửa)
     ["Flashlight"] = "🔦 Đèn Pin", ["Candle"] = "🕯️ Nến", ["Crucifix"] = "✝️ Cây Thánh Giá",
     ["Lockpick"] = "🗝️ Lockpick", ["Bandage"] = "🩹 Băng Gạc", ["Vitamins"] = "💊 Vitamin",
-    ["Battery"] = "🔋 Pin", ["Lighter"] = "🔥 Bật Lửa",
+    ["Battery"] = "🔋 Pin",
     
     -- Floor 2 Items (The Mines)
     ["Bulklight"] = "🔦 Đèn Pin Sạc", ["Glowstick"] = "🧪 Đèn Rồng (Glowstick)",
@@ -230,7 +231,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- TÍNH NĂNG TỐC ĐỘ, NOCLIP & BAY SÁNG TẠO
+-- TÍNH NĂNG TỐC ĐỘ, NOCLIP, BYPASS FIGURE/SEEK & BAY SÁNG TẠO
 --------------------------------------------------
 RunService.RenderStepped:Connect(function(dt)
     if LocalPlayer.Character then
@@ -250,6 +251,27 @@ RunService.RenderStepped:Connect(function(dt)
         if Flags.NoClip then
             for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
                 if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
+            end
+        end
+    end
+
+    -- LOGIC BYPASS (FIGURE & SEEK): QUÉT LIÊN TỤC ĐẶT TỐC ĐỘ THÀNH 0
+    if Flags.BypassFigureSeek then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") then
+                local nameLower = obj.Name:lower()
+                if nameLower:find("figure") or nameLower:find("seek") then
+                    local hum = obj:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum.WalkSpeed = 0
+                    end
+                    for _, part in ipairs(obj:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.Velocity = Vector3.new(0, 0, 0)
+                            part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                end
             end
         end
     end
@@ -957,6 +979,7 @@ end)
 createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet", 190, function(st)
     updateFlyControlVisibility()
 end)
+createToggleSwitch(pages[4], Translations[Flags.Language].BypassFS, "BypassFigureSeek", 225)
 
 -- TAB 5: SETTINGS & INFO
 local themeLbl = Instance.new("TextLabel")
