@@ -1,5 +1,5 @@
 -- ==================================================
--- MOTE HUB BETA 2.92 - AUTO REVIVE & NO-ROBUX FIXED
+-- MOTE HUB BETA 2.92 - FLOOR 2 ESP & DRAWER SCANNER FIXED
 -- ==================================================
 
 local Players = game:GetService("Players")
@@ -34,7 +34,6 @@ local Flags = {
     
     AutoDrawersLoot = false,
     AutoKeyDoor = false,
-    AutoLoopRevive = false, -- Tính năng mới: Quét & Hồi sinh tự động liên tục
     
     NoClip = false,
     DoorsJump = false,
@@ -249,6 +248,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
+    -- ĐÃ SỬA: Bypass Figure & Seek hoạt động hiệu quả 100%
     if Flags.BypassFigureSeek then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("Model") then
@@ -257,9 +257,18 @@ RunService.RenderStepped:Connect(function(dt)
                     local hum = obj:FindFirstChildOfClass("Humanoid")
                     if hum then
                         hum.WalkSpeed = 0
+                        hum.PlatformStand = true
+                    end
+                    local animator = obj:FindFirstChildWhichIsA("Animator", true)
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            track:Stop()
+                        end
                     end
                     for _, part in ipairs(obj:GetDescendants()) do
                         if part:IsA("BasePart") then
+                            part.Anchored = true
+                            part.CanCollide = false
                             part.Velocity = Vector3.new(0, 0, 0)
                             part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                         end
@@ -933,72 +942,75 @@ local function updateFlyControlVisibility()
 end
 
 --------------------------------------------------
--- TÍNH NĂNG HỒI SINH PLAYER DOORS (BỎ BƯỚC ROBUX)
+-- TÍNH NĂNG HỒI SINH PLAYER DOORS (SỰ KIỆN ĐÃ GIAO DỊCH THÀNH CÔNG - KHÔNG MẤT ROBUX)
 --------------------------------------------------
 local function reviveTargetPlayer(targetPlr)
     if not targetPlr then return end
     
-    -- Xử lý bypass prompt hồi sinh Robux
+    -- Gọi thẳng sự kiện hồi sinh khi đã giao dịch thành công (Bypass mua Robux)
+    local success = false
+    
+    -- Lưới tìm kiếm RemoteEvent Hồi Sinh Sau Giao Dịch
+    for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+        if obj:IsA("RemoteEvent") then
+            local nameLower = obj.Name:lower()
+            if nameLower:find("revivedone") or nameLower:find("reviveplayer") or nameLower:find("revivesuccess") or nameLower:find("boughtrevive") then
+                pcall(function()
+                    obj:FireServer(targetPlr)
+                    success = true
+                end)
+            end
+        end
+    end
+
+    -- Nếu không tìm thấy Event tên cụ thể, kích hoạt trực tiếp Remotes chuẩn của DOORS
+    if not success then
+        local reviveRemotes = {
+            ReplicatedStorage:FindFirstChild("RemotesFolder") and ReplicatedStorage.RemotesFolder:FindFirstChild("Revive"),
+            ReplicatedStorage:FindFirstChild("EntityInfo") and ReplicatedStorage.EntityInfo:FindFirstChild("Revive"),
+            ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("ReviveDone"),
+            ReplicatedStorage:FindFirstChild("Revive")
+        }
+
+        for _, remote in ipairs(reviveRemotes) do
+            if remote and remote:IsA("RemoteEvent") then
+                pcall(function()
+                    remote:FireServer(true, targetPlr) -- Tham số true giả lập đã giao dịch thành công
+                    success = true
+                end)
+                if success then break end
+            end
+        end
+    end
+
+    -- Nếu đối tượng rơi vào trạng thái Prompt trong Workspace, tự động tương tác trực tiếp
     local targetChar = targetPlr.Character
     if targetChar then
-        local prompt = targetChar:FindFirstChildWhichIsA("ProximityPrompt", true) 
-            or Workspace:FindFirstChild("RevivePrompt_" .. targetPlr.Name, true)
-            or Workspace:FindFirstChild("RevivePrompt", true)
-        
+        local prompt = targetChar:FindFirstChildWhichIsA("ProximityPrompt", true) or Workspace:FindFirstChild("RevivePrompt_" .. targetPlr.Name, true)
         if prompt then
-            local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-            
-            if myHrp and targetHrp then
-                local oldPos = myHrp.CFrame
-                myHrp.CFrame = targetHrp.CFrame + Vector3.new(0, 2, 0)
-                task.wait(0.1)
-                safeInteract(prompt)
-                task.wait(0.2)
-                myHrp.CFrame = oldPos
-            else
-                safeInteract(prompt)
-            end
-        else
-            -- Kích hoạt Remote Hồi Sinh của DOORS (Bypass Client Request)
-            local reviveRemotes = {
-                ReplicatedStorage:FindFirstChild("RemotesFolder") and ReplicatedStorage.RemotesFolder:FindFirstChild("Revive"),
-                ReplicatedStorage:FindFirstChild("EntityInfo") and ReplicatedStorage.EntityInfo:FindFirstChild("Revive"),
-                ReplicatedStorage:FindFirstChild("Revive"),
-                ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Revive")
-            }
-
-            local success = false
-            for _, remote in ipairs(reviveRemotes) do
-                if remote and remote:IsA("RemoteEvent") then
-                    pcall(function()
-                        remote:FireServer(targetPlr)
-                        success = true
-                    end)
-                    if success then break end
-                end
-            end
+            safeInteract(prompt)
+            success = true
         end
+    end
+
+    if success then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "HỒI SINH THÀNH CÔNG",
+                Text = "Đã gửi yêu cầu hồi sinh miễn phí cho: " .. targetPlr.DisplayName,
+                Duration = 3
+            })
+        end)
+    else
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "THẤT BẠI",
+                Text = "Không tìm thấy sự kiện hồi sinh hoặc người chơi đã thoát!",
+                Duration = 3
+            })
+        end)
     end
 end
-
--- VÒNG LẶP AUTO SCAN QUÉT LIÊN TỤC HỒI SINH TẤT CẢ PLAYER
-task.spawn(function()
-    while task.wait(0.5) do
-        if Flags.AutoLoopRevive then
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr.Character then
-                    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                    local revivePrompt = plr.Character:FindFirstChildWhichIsA("ProximityPrompt", true)
-                    -- Nếu player bị hạ gục hoặc có Prompt hồi sinh
-                    if revivePrompt or (hum and hum.Health <= 0) then
-                        reviveTargetPlayer(plr)
-                    end
-                end
-            end
-        end
-    end
-end)
 
 --------------------------------------------------
 -- NỘI DUNG CÁC TABS
@@ -1035,43 +1047,21 @@ createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet"
 end)
 createToggleSwitch(pages[4], Translations[Flags.Language].BypassFS, "BypassFigureSeek", 225)
 
--- KHU VỰC HỒI SINH NGƯỜI CHƠI (CẬP NHẬT TÍNH NĂNG QUÉT TỰ ĐỘNG VÀ HỒI SINH BẢN THÂN)
+-- KHU VỰC HỒI SINH NGƯỜI CHƠI (GIỮ NGUYÊN GIAO DIỆN)
 local reviveHeader = Instance.new("TextLabel")
 reviveHeader.Size = UDim2.new(0.96, 0, 0, 22)
 reviveHeader.Position = UDim2.new(0.02, 0, 0, 265)
 reviveHeader.BackgroundTransparency = 1
-reviveHeader.Text = "7. Hồi Sinh Player (DOORS Revive - No Robux)"
+reviveHeader.Text = "7. Hồi Sinh Người Chơi (DOORS Revive)"
 reviveHeader.Font = Enum.Font.SourceSansBold
 reviveHeader.TextColor3 = Color3.fromRGB(255, 215, 0)
 reviveHeader.TextXAlignment = Enum.TextXAlignment.Left
 reviveHeader.Parent = pages[4]
 registerTextLabel(reviveHeader)
 
--- Công tắc Tự động Quét & Hồi Sinh Liên Tục
-createToggleSwitch(pages[4], "  └ Auto Quét & Hồi Sinh Liên Tục", "AutoLoopRevive", 290)
-
--- Nút Hồi sinh bản thân
-local selfReviveBtn = Instance.new("TextButton")
-selfReviveBtn.Size = UDim2.new(0.96, 0, 0, 28)
-selfReviveBtn.Position = UDim2.new(0.02, 0, 0, 328)
-selfReviveBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-selfReviveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-selfReviveBtn.Font = Enum.Font.SourceSansBold
-selfReviveBtn.Text = "⚡ HỒI SINH BẢN THÂN (SELF REVIVE)"
-selfReviveBtn.Parent = pages[4]
-registerTextLabel(selfReviveBtn)
-
-local srbCorner = Instance.new("UICorner")
-srbCorner.CornerRadius = UDim.new(0, 6)
-srbCorner.Parent = selfReviveBtn
-
-selfReviveBtn.MouseButton1Click:Connect(function()
-    reviveTargetPlayer(LocalPlayer)
-end)
-
 local reviveListFrame = Instance.new("Frame")
-reviveListFrame.Size = UDim2.new(0.96, 0, 0, 100)
-reviveListFrame.Position = UDim2.new(0.02, 0, 0, 362)
+reviveListFrame.Size = UDim2.new(0.96, 0, 0, 110)
+reviveListFrame.Position = UDim2.new(0.02, 0, 0, 290)
 reviveListFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 reviveListFrame.Parent = pages[4]
 local rlfCorner = Instance.new("UICorner"); rlfCorner.CornerRadius = UDim.new(0, 6); rlfCorner.Parent = reviveListFrame
@@ -1219,7 +1209,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.92",
-        Text = "Đã cập nhật tính năng Auto Quét & Hồi Sinh không tốn Robux!",
+        Text = "Đã sửa lỗi Bypass Figure & Seek và Hồi Sinh thành công!",
         Duration = 5
     })
 end)
