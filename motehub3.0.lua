@@ -11,6 +11,7 @@ local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -947,6 +948,63 @@ local function updateFlyControlVisibility()
 end
 
 --------------------------------------------------
+-- TÍNH NĂNG HỒI SINH PLAYER DOORS (TÍNH NĂNG CHUẨN MỚI)
+--------------------------------------------------
+local function reviveTargetPlayer(targetPlr)
+    if not targetPlr then return end
+    
+    -- Thử kích hoạt qua Remotes chuẩn của DOORS
+    local reviveRemotes = {
+        ReplicatedStorage:FindFirstChild("RemotesFolder") and ReplicatedStorage.RemotesFolder:FindFirstChild("Revive"),
+        ReplicatedStorage:FindFirstChild("EntityInfo") and ReplicatedStorage.EntityInfo:FindFirstChild("Revive"),
+        ReplicatedStorage:FindFirstChild("Revive"),
+        ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Revive")
+    }
+
+    local executedRemote = false
+    for _, remote in ipairs(reviveRemotes) do
+        if remote and remote:IsA("RemoteEvent") then
+            pcall(function()
+                remote:FireServer(targetPlr)
+                executedRemote = true
+            end)
+            if executedRemote then break end
+        end
+    end
+
+    -- Nếu không bắn được Remote Event, chuyển sang tương tác ProximityPrompt trực tiếp
+    if not executedRemote then
+        local targetChar = targetPlr.Character
+        if targetChar then
+            local prompt = targetChar:FindFirstChildWhichIsA("ProximityPrompt", true) or Workspace:FindFirstChild("RevivePrompt_" .. targetPlr.Name, true)
+            if prompt then
+                local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+                
+                if myHrp and targetHrp then
+                    local oldPos = myHrp.CFrame
+                    myHrp.CFrame = targetHrp.CFrame + Vector3.new(0, 2, 0)
+                    task.wait(0.1)
+                    safeInteract(prompt)
+                    task.wait(0.2)
+                    myHrp.CFrame = oldPos
+                else
+                    safeInteract(prompt)
+                end
+            else
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "HỒI SINH",
+                        Text = "Không tìm thấy tương tác hồi sinh cho " .. targetPlr.DisplayName,
+                        Duration = 3
+                    })
+                end)
+            end
+        end
+    end
+end
+
+--------------------------------------------------
 -- NỘI DUNG CÁC TABS
 --------------------------------------------------
 -- TAB 1: MAIN
@@ -980,6 +1038,87 @@ createToggleSwitch(pages[4], Translations[Flags.Language].FlyCarpet, "FlyCarpet"
     updateFlyControlVisibility()
 end)
 createToggleSwitch(pages[4], Translations[Flags.Language].BypassFS, "BypassFigureSeek", 225)
+
+-- CẬP NHẬT TAB THỬ NGHIỆM: KHU VỰC HỒI SINH NGƯỜI CHƠI DOORS
+local reviveHeader = Instance.new("TextLabel")
+reviveHeader.Size = UDim2.new(0.96, 0, 0, 22)
+reviveHeader.Position = UDim2.new(0.02, 0, 0, 265)
+reviveHeader.BackgroundTransparency = 1
+reviveHeader.Text = "7. Hồi Sinh Người Chơi (DOORS Revive)"
+reviveHeader.Font = Enum.Font.SourceSansBold
+reviveHeader.TextColor3 = Color3.fromRGB(255, 215, 0)
+reviveHeader.TextXAlignment = Enum.TextXAlignment.Left
+reviveHeader.Parent = pages[4]
+registerTextLabel(reviveHeader)
+
+local reviveListFrame = Instance.new("Frame")
+reviveListFrame.Size = UDim2.new(0.96, 0, 0, 110)
+reviveListFrame.Position = UDim2.new(0.02, 0, 0, 290)
+reviveListFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+reviveListFrame.Parent = pages[4]
+local rlfCorner = Instance.new("UICorner"); rlfCorner.CornerRadius = UDim.new(0, 6); rlfCorner.Parent = reviveListFrame
+
+local reviveScroll = Instance.new("ScrollingFrame")
+reviveScroll.Size = UDim2.new(1, -8, 1, -8)
+reviveScroll.Position = UDim2.new(0, 4, 0, 4)
+reviveScroll.BackgroundTransparency = 1
+reviveScroll.ScrollBarThickness = 4
+reviveScroll.Parent = reviveListFrame
+
+local reviveLayout = Instance.new("UIListLayout")
+reviveLayout.SortOrder = Enum.SortOrder.LayoutOrder
+reviveLayout.Padding = UDim.new(0, 4)
+reviveLayout.Parent = reviveScroll
+
+local function updateRevivePlayerList()
+    for _, child in ipairs(reviveScroll:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local count = 0
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            count = count + 1
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -6, 0, 28)
+            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Font = Enum.Font.SourceSansBold
+            btn.Text = "  ➕ Hồi sinh: " .. plr.DisplayName .. " (@" .. plr.Name .. ")"
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.Parent = reviveScroll
+            registerTextLabel(btn)
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = btn
+
+            -- Sự kiện Bấm chuột / Chạm cảm ứng
+            btn.MouseButton1Click:Connect(function()
+                reviveTargetPlayer(plr)
+            end)
+        end
+    end
+
+    if count == 0 then
+        local noPlrLbl = Instance.new("TextLabel")
+        noPlrLbl.Size = UDim2.new(1, 0, 1, 0)
+        noPlrLbl.BackgroundTransparency = 1
+        noPlrLbl.Text = "Không có người chơi khác trong phòng"
+        noPlrLbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+        noPlrLbl.Font = Enum.Font.SourceSansItalic
+        noPlrLbl.Parent = reviveScroll
+        registerTextLabel(noPlrLbl)
+    end
+
+    reviveScroll.CanvasSize = UDim2.new(0, 0, 0, count * 32)
+end
+
+updateRevivePlayerList()
+Players.PlayerAdded:Connect(updateRevivePlayerList)
+Players.PlayerRemoving:Connect(updateRevivePlayerList)
 
 -- TAB 5: SETTINGS & INFO
 local themeLbl = Instance.new("TextLabel")
@@ -1063,7 +1202,7 @@ applyTheme()
 pcall(function()
     StarterGui:SetCore("SendNotification", {
         Title = "MOTE HUB BETA 2.92",
-        Text = "Đã cập nhật ESP Floor 2 & Quét vật phẩm trong tủ chưa mở!",
+        Text = "Đã cập nhật tính năng Hồi Sinh Player trong Tab Thử Nghiệm!",
         Duration = 5
     })
 end)
